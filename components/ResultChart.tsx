@@ -9,10 +9,10 @@ interface ResultChartProps {
 export default function ResultChart({ answers }: ResultChartProps) {
   const groupScores = {
     Tech: average(answers.slice(4, 8)),
-    Process: average(answers.slice(0, 4).concat(9, 10, 11)),
+    Process: average(answers.slice(0, 4).concat(answers.slice(9, 12))),
     People: average(answers.slice(12, 16)),
-    Compliance: average([8, 9, 10]),
-    Risk: average([7, 11, 19]),
+    Compliance: average([8, 9, 10].map((i) => answers[i] || 0)),
+    Risk: average([7, 11, 19].map((i) => answers[i] || 0)),
   }
 
   const data = Object.entries(groupScores).map(([domain, value]) => ({

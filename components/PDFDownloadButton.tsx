@@ -2,17 +2,23 @@
 
 import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
-import html2pdf from "html2pdf.js"
 
 export default function PDFDownloadButton() {
   const [isReady, setIsReady] = useState(false)
+  const [html2pdf, setHtml2pdf] = useState<any>(null)
 
   useEffect(() => {
-    // Delay activation after content renders
-    setTimeout(() => setIsReady(true), 1000)
+    // Dynamically import html2pdf only on the client side
+    import("html2pdf.js").then((module) => {
+      setHtml2pdf(() => module.default)
+      // Delay activation after content renders
+      setTimeout(() => setIsReady(true), 1000)
+    })
   }, [])
 
   const handleDownload = () => {
+    if (!html2pdf) return
+
     const element = document.getElementById("assessment-result-pdf")
     if (!element) return
 
