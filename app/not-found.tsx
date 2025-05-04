@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 
 export default function NotFound() {
   return (
@@ -9,9 +8,9 @@ export default function NotFound() {
       <p className="text-muted-foreground mt-2 mb-6 max-w-md">
         Sorry, we couldn't find the page you're looking for. It might have been moved or deleted.
       </p>
-      <Button asChild>
-        <Link href="/">Return to Home</Link>
-      </Button>
+      <Link href="/" className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-md transition-colors">
+        Return to Home
+      </Link>
     </div>
   )
 }
