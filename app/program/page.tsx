@@ -118,12 +118,7 @@ export default function ProgramPage() {
               </ul>
             </div>
             <div className="relative h-[400px] rounded-lg overflow-hidden shadow-xl">
-              <Image
-                src="/students-studying-computers.jpg"
-                alt="GRC Professionals collaborating"
-                fill
-                className="object-cover"
-              />
+              <Image src="/people-studying.jpeg" alt="GRC Professionals collaborating" fill className="object-cover" />
             </div>
           </div>
         </div>

@@ -328,7 +328,7 @@ export default function ApplyPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="relative h-[400px] rounded-lg overflow-hidden shadow-xl">
-              <Image src="/people-collaborating-office.jpg" alt="GRC Program Graduates" fill className="object-cover" />
+              <Image src="/community.jpeg" alt="GRC Program Community" fill className="object-cover" />
             </div>
             <div>
               <h2 className="text-3xl font-bold mb-6">Join Our Growing Community</h2>
