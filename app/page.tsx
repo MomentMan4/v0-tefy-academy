@@ -21,6 +21,16 @@ export default function LandingPage() {
             <Link href="/assessment">Discover Your Cybersecurity Fit</Link>
           </Button>
         </div>
+        <div className="mt-6">
+          <a
+            href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-primary text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition"
+          >
+            Book a Free Info Session
+          </a>
+        </div>
       </section>
 
       {/* Why GRC Now */}

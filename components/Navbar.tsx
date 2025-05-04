@@ -9,7 +9,6 @@ const navLinks = [
   { label: "Home", href: "/" },
   { label: "Program", href: "/program" },
   { label: "Take the Assessment", href: "/assessment" },
-  { label: "Apply", href: "/apply" },
 ]
 
 export default function Navbar() {

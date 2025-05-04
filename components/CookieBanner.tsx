@@ -2,21 +2,41 @@
 
 import { useState, useEffect } from "react"
 import CookieModal from "./CookieModal"
+import PrivacyModal from "./PrivacyModal"
+import TermsModal from "./TermsModal"
+import CookiesModal from "./CookiesModal"
 
 export default function CookieBanner() {
   const [show, setShow] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
+  const [showCookies, setShowCookies] = useState(false)
 
   useEffect(() => {
     const consent = localStorage.getItem("cookie-consent")
-    if (!consent) setShow(true)
+    if (consent) {
+      try {
+        const { timestamp } = JSON.parse(consent)
+        const expired = Date.now() - timestamp > 180 * 24 * 60 * 60 * 1000 // 180 days
+        if (expired) {
+          localStorage.removeItem("cookie-consent")
+          setShow(true)
+        }
+      } catch (error) {
+        console.error("Error parsing cookie consent:", error)
+        setShow(true)
+      }
+    } else {
+      setShow(true)
+    }
   }, [])
 
   const handleConsent = (choice: "accept" | "reject") => {
     const config =
       choice === "accept"
-        ? { essential: true, analytics: true, marketing: true }
-        : { essential: true, analytics: false, marketing: false }
+        ? { essential: true, analytics: true, marketing: true, timestamp: Date.now() }
+        : { essential: true, analytics: false, marketing: false, timestamp: Date.now() }
 
     localStorage.setItem("cookie-consent", JSON.stringify(config))
     setShow(false)
@@ -41,10 +61,24 @@ export default function CookieBanner() {
               Accept All
             </button>
           </div>
+          <div className="mt-3 text-center">
+            <button onClick={() => setShowPrivacy(true)} className="text-xs underline text-muted-foreground mx-1">
+              Privacy Policy
+            </button>
+            <button onClick={() => setShowTerms(true)} className="text-xs underline text-muted-foreground mx-1">
+              Terms of Use
+            </button>
+            <button onClick={() => setShowCookies(true)} className="text-xs underline text-muted-foreground mx-1">
+              Cookie Policy
+            </button>
+          </div>
         </div>
       )}
 
       <CookieModal open={showModal} setOpen={setShowModal} setBannerVisible={setShow} />
+      <PrivacyModal open={showPrivacy} setOpen={setShowPrivacy} />
+      <TermsModal open={showTerms} setOpen={setShowTerms} />
+      <CookiesModal open={showCookies} setOpen={setShowCookies} />
     </>
   )
 }

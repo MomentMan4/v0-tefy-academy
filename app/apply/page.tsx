@@ -102,6 +102,18 @@ export default function ApplyPage() {
         </label>
       </div>
 
+      <div className="border-t mt-8 pt-6 text-center">
+        <p className="mb-3 text-muted-foreground">Need more clarity before enrolling?</p>
+        <a
+          href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block bg-primary text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"
+        >
+          Book a Free Info Session
+        </a>
+      </div>
+
       <div className="text-center space-y-2">
         <p className="text-xs text-muted-foreground">
           All payments are final. You may defer to a future session, but refunds are not issued except in special cases.

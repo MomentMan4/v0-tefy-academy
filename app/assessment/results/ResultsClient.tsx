@@ -202,6 +202,20 @@ export default function ResultsClient() {
         </Button>
       </div>
 
+      <div className="mt-8">
+        <p className="text-sm mb-2 text-muted-foreground text-center">Have questions about your results?</p>
+        <div className="flex justify-center">
+          <a
+            href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-primary text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition"
+          >
+            Talk to a GRC Advisor
+          </a>
+        </div>
+      </div>
+
       <Rating email={userInfo.email} />
     </div>
   )

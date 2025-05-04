@@ -67,8 +67,8 @@
     "html2pdf.js": "latest",
     "resend": "latest",
     "stripe": "latest",
-    "@headlessui/react": "latest",
-    "@vercel/analytics": "latest"
+    "@vercel/analytics": "latest",
+    "@headlessui/react": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
