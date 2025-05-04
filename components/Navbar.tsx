@@ -22,8 +22,8 @@ export default function Navbar() {
           <Image
             src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/TEFY-logo.PNG-3TKNwYc4u7SmhwZcqvDO6lg5fRAgcr.png"
             alt="TEFY Digital Academy"
-            width={120}
-            height={40}
+            width={60}
+            height={20}
           />
         </Link>
         <nav className="hidden md:flex gap-6">

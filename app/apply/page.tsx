@@ -1,12 +1,36 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export default function ApplyPage() {
   const [includeInternship, setIncludeInternship] = useState(false)
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  })
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
   const handleApply = () => {
+    // Validate form
+    if (!formData.name || !formData.email) {
+      alert("Please enter your name and email")
+      return
+    }
+
+    // Store form data in localStorage for potential use later
+    localStorage.setItem("enrollment-data", JSON.stringify(formData))
+
+    // Redirect to Stripe checkout
     const url = includeInternship
       ? "https://buy.stripe.com/cN2aGAg6U2mPdb2bIK"
       : "https://buy.stripe.com/4gw9Cwf2Qd1tdb23cd"
@@ -21,6 +45,45 @@ export default function ApplyPage() {
         Secure your seat for our next 5-week cohort. Includes live classes, case studies, and a capstone project. You
         may also opt-in for a practical internship after the course.
       </p>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="name">Full Name</Label>
+          <Input
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Enter your full name"
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="email">Email Address</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="Enter your email address"
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="phone">Phone Number (Optional)</Label>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="Enter your phone number"
+          />
+        </div>
+      </div>
 
       <div className="bg-muted p-6 rounded-md space-y-4 text-sm">
         <p>

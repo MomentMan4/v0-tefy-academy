@@ -24,22 +24,34 @@ export default function QuestionsPage() {
     }
   }
 
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1)
+    }
+  }
+
   const handleAnswerChange = (score: number) => {
     const updatedAnswers = [...answers]
     updatedAnswers[currentIndex] = score
     setAnswers(updatedAnswers)
   }
 
+  const currentQuestion = questions[currentIndex]
+
   return (
     <div className="max-w-2xl mx-auto py-10 px-4 space-y-6">
       <ProgressBar current={currentIndex + 1} total={totalQuestions} />
       <QuestionCard
-        question={questions[currentIndex].question}
-        tooltip={questions[currentIndex].tooltip}
+        question={currentQuestion.question}
+        tooltip={currentQuestion.tooltip}
+        options={currentQuestion.options}
         selected={answers[currentIndex]}
         onSelect={handleAnswerChange}
       />
-      <div className="flex justify-end">
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={handlePrevious} disabled={currentIndex === 0}>
+          Previous
+        </Button>
         <Button onClick={handleNext} disabled={answers[currentIndex] === 0}>
           {currentIndex === totalQuestions - 1 ? "Finish" : "Next"}
         </Button>

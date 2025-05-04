@@ -7,7 +7,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="text-center max-w-4xl space-y-6">
         <h1 className="text-5xl font-bold leading-tight">
-          Launch a Future-Proof Cybersecurity Career — in Just 5 Weeks
+          Launch a Future-Proof Cybersecurity Career, in Just 5 Weeks
         </h1>
         <p className="text-lg text-muted-foreground">
           Gain real-world GRC skills, unlock remote job opportunities, and pivot into one of the fastest-growing
@@ -51,7 +51,7 @@ export default function LandingPage() {
           &quot;Coming from physical security, I pivoted into GRC with confidence thanks to this course!&quot; — Femi A.
         </blockquote>
         <blockquote className="italic">
-          &quot;I transitioned from admin support into tech compliance — life changing!&quot; — Ahmad H.
+          &quot;I transitioned from admin support into tech compliance, best life changing decision!&quot; — Ahmad H.
         </blockquote>
       </section>
 
