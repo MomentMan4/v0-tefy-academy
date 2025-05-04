@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import Image from "next/image"
-import { CheckCircle, ArrowRight, Users, Shield, Laptop } from "lucide-react"
+import { ArrowRight, Users, Shield, Laptop, Calendar, Award, BookOpen } from "lucide-react"
+import CountdownTimer from "@/components/CountdownTimer"
 
 export default function LandingPage() {
   return (
@@ -27,7 +28,7 @@ export default function LandingPage() {
                 </Link>
               </Button>
               <Button variant="outline" asChild size="lg">
-                <Link href="/assessment">Discover Your Cybersecurity Fit</Link>
+                <Link href="/assessment">Take The Free Assessment</Link>
               </Button>
             </div>
             <div className="pt-4">
@@ -50,6 +51,62 @@ export default function LandingPage() {
                 className="object-cover rounded-lg shadow-lg"
               />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Countdown Section */}
+      <section className="max-w-5xl mx-auto px-8 text-center space-y-6">
+        <h2 className="text-3xl font-bold">Next Cohort Begins May 28th</h2>
+        <CountdownTimer targetDate="2025-05-28T00:00:00" />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-10">
+          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+              <Calendar size={24} />
+            </div>
+            <h3 className="text-xl font-medium mb-2">5 Weeks</h3>
+            <p className="text-muted-foreground text-sm">
+              Wednesday & Friday 7:00 PM EST
+              <br />
+              Saturday 10:00 AM EST
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+              <Award size={24} />
+            </div>
+            <h3 className="text-xl font-medium mb-2">15 Live Sessions</h3>
+            <p className="text-muted-foreground text-sm">
+              Interactive classes with
+              <br />
+              Certificate of Participation
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+              <Shield size={24} />
+            </div>
+            <h3 className="text-xl font-medium mb-2">Cost</h3>
+            <p className="text-muted-foreground text-sm">
+              700 CAD (Tax exclusive)
+              <br />
+              +300 CAD Internship (Optional)
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
+              <Users size={24} />
+            </div>
+            <h3 className="text-xl font-medium mb-2">Limited Spots</h3>
+            <p className="text-muted-foreground text-sm">
+              Immersive experience
+              <br />
+              Starts May 28th
+            </p>
           </div>
         </div>
       </section>
@@ -88,39 +145,71 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Curriculum Highlights */}
+      {/* What You'll Learn - Refined Section */}
       <section className="w-full bg-gray-50 py-16">
         <div className="max-w-6xl mx-auto px-8 space-y-8">
-          <h2 className="text-3xl font-bold text-center">What You&apos;ll Learn</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="flex-shrink-0 text-primary mt-1" size={20} />
-              <div>
-                <h3 className="font-medium">Conduct Risk Assessments</h3>
-                <p className="text-muted-foreground">Learn to identify, analyze, and prioritize security risks.</p>
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold">What You'll Learn</h2>
+            <p className="text-lg text-muted-foreground mt-3 max-w-2xl mx-auto">
+              Gain practical skills that employers are actively seeking in the cybersecurity GRC field
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
+                <Shield size={24} />
+              </div>
+              <h3 className="text-xl font-medium mb-2">Risk Management</h3>
+              <p className="text-muted-foreground mb-3">
+                Master the art of identifying, analyzing, and mitigating security risks that organizations face daily.
+              </p>
+              <div className="flex items-center text-primary font-medium text-sm">
+                <Link href="/program" className="flex items-center gap-1 hover:underline">
+                  Learn more <ArrowRight size={14} />
+                </Link>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="flex-shrink-0 text-primary mt-1" size={20} />
-              <div>
-                <h3 className="font-medium">Apply Frameworks</h3>
-                <p className="text-muted-foreground">Master NIST, ISO, GDPR, and other essential frameworks.</p>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
+                <BookOpen size={24} />
+              </div>
+              <h3 className="text-xl font-medium mb-2">Compliance Frameworks</h3>
+              <p className="text-muted-foreground mb-3">
+                Apply industry-standard frameworks like NIST and ISO to ensure organizations meet regulatory
+                requirements.
+              </p>
+              <div className="flex items-center text-primary font-medium text-sm">
+                <Link href="/program" className="flex items-center gap-1 hover:underline">
+                  Learn more <ArrowRight size={14} />
+                </Link>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="flex-shrink-0 text-primary mt-1" size={20} />
-              <div>
-                <h3 className="font-medium">Write Policies & Manage Risk</h3>
-                <p className="text-muted-foreground">Develop clear policies and effective vendor risk management.</p>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
+                <Users size={24} />
+              </div>
+              <h3 className="text-xl font-medium mb-2">Career-Ready Skills</h3>
+              <p className="text-muted-foreground mb-3">
+                Build a professional portfolio with hands-on projects and gain the confidence to excel in GRC
+                interviews.
+              </p>
+              <div className="flex items-center text-primary font-medium text-sm">
+                <Link href="/program" className="flex items-center gap-1 hover:underline">
+                  Learn more <ArrowRight size={14} />
+                </Link>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="flex-shrink-0 text-primary mt-1" size={20} />
-              <div>
-                <h3 className="font-medium">Hands-on Labs & Simulations</h3>
-                <p className="text-muted-foreground">Practice with real-world scenarios and simulated audits.</p>
-              </div>
-            </div>
+          </div>
+
+          <div className="flex justify-center mt-10">
+            <Button asChild variant="outline" size="lg" className="gap-2">
+              <Link href="/program">
+                View Full Curriculum <ArrowRight size={16} />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -161,7 +250,7 @@ export default function LandingPage() {
               variant="outline"
               className="bg-transparent text-white border-white hover:bg-white/10"
             >
-              <Link href="/assessment">Take the Free Assessment</Link>
+              <Link href="/assessment">Take The Free Assessment</Link>
             </Button>
           </div>
         </div>

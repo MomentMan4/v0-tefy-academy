@@ -33,7 +33,7 @@ export default function ProgramPage() {
       <section className="w-full bg-gradient-to-br from-indigo-50 via-white to-blue-50 py-20">
         <div className="max-w-6xl mx-auto px-6 flex flex-col items-center text-center">
           <div className="inline-block bg-indigo-100 text-indigo-800 px-4 py-1 rounded-full text-sm font-medium mb-6">
-            Next Cohort Starting Soon
+            <strong>Next Cohort Starting May 28th</strong>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
             Cybersecurity GRC <span className="text-primary">Mastery Program</span>
@@ -119,7 +119,7 @@ export default function ProgramPage() {
             </div>
             <div className="relative h-[400px] rounded-lg overflow-hidden shadow-xl">
               <Image
-                src="/placeholder.svg?key=cq3cd"
+                src="/students-studying-computers.jpg"
                 alt="GRC Professionals collaborating"
                 fill
                 className="object-cover"
@@ -315,62 +315,6 @@ export default function ProgramPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="w-full py-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Success Stories</h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              Hear from our graduates who have successfully transitioned into cybersecurity GRC roles.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-20 h-20 rounded-full bg-gray-200 mb-4 overflow-hidden relative">
-                  <Image src="/professional-woman-portrait.png" alt="Sarah J." fill className="object-cover" />
-                </div>
-                <h3 className="font-semibold">Sarah J.</h3>
-                <p className="text-sm text-primary mb-4">Former Marketing Manager</p>
-                <p className="text-muted-foreground italic">
-                  "This program gave me the confidence to pivot into GRC. Within 2 months of graduating, I landed a
-                  Compliance Analyst role at a fintech company."
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-20 h-20 rounded-full bg-gray-200 mb-4 overflow-hidden relative">
-                  <Image src="/professional-man-portrait.png" alt="Michael T." fill className="object-cover" />
-                </div>
-                <h3 className="font-semibold">Michael T.</h3>
-                <p className="text-sm text-primary mb-4">Former Project Coordinator</p>
-                <p className="text-muted-foreground italic">
-                  "The hands-on approach made complex concepts accessible. I'm now working as a GRC Analyst and earning
-                  40% more than my previous role."
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-20 h-20 rounded-full bg-gray-200 mb-4 overflow-hidden relative">
-                  <Image src="/diverse-professional-woman.png" alt="Aisha K." fill className="object-cover" />
-                </div>
-                <h3 className="font-semibold">Aisha K.</h3>
-                <p className="text-sm text-primary mb-4">Former Executive Assistant</p>
-                <p className="text-muted-foreground italic">
-                  "Coming from an admin background, I never thought I'd work in cybersecurity. This program changed
-                  everything - I'm now a Risk Coordinator."
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* FAQ Section */}
       <section className="w-full bg-gray-50 py-20">
         <div className="max-w-4xl mx-auto px-6">
@@ -409,8 +353,8 @@ export default function ProgramPage() {
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h3 className="font-semibold text-lg mb-2">What tools will I learn?</h3>
               <p className="text-muted-foreground">
-                You'll interact with tools like SIEM simulators, risk register templates, ISO frameworks, and GRC
-                platforms such as ServiceNow, OneTrust, and more.
+                You'll interact with tools like SIEM simulators, risk register templates, ISO / NIST frameworks, and GRC
+                platforms such.
               </p>
             </div>
           </div>

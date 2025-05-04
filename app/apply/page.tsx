@@ -2,12 +2,13 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CheckCircle, ArrowRight, Shield, Calendar, Users } from "lucide-react"
+import { CheckCircle, ArrowRight, Shield, Calendar, Users, ArrowLeft } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 
 export default function ApplyPage() {
   const [includeInternship, setIncludeInternship] = useState(false)
@@ -18,6 +19,15 @@ export default function ApplyPage() {
   })
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isStripeRedirect, setIsStripeRedirect] = useState(false)
+
+  useEffect(() => {
+    // Check if this is a redirect from Stripe
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.has("stripe_redirect")) {
+      setIsStripeRedirect(true)
+    }
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -47,14 +57,27 @@ export default function ApplyPage() {
 
     // Redirect to Stripe checkout
     const url = includeInternship
-      ? "https://buy.stripe.com/cN2aGAg6U2mPdb2bIK"
-      : "https://buy.stripe.com/4gw9Cwf2Qd1tdb23cd"
+      ? "https://buy.stripe.com/cN2aGAg6U2mPdb2bIK?redirect_back=true"
+      : "https://buy.stripe.com/4gw9Cwf2Qd1tdb23cd?redirect_back=true"
 
     window.location.href = url
   }
 
   return (
     <div className="flex flex-col items-center">
+      {/* Back button for Stripe redirects */}
+      {isStripeRedirect && (
+        <div className="w-full bg-amber-50 p-4 border-b border-amber-200">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <p className="text-amber-800">Need more time to decide?</p>
+            <Link href="/program" className="flex items-center gap-1 text-amber-800 hover:text-amber-900 font-medium">
+              <ArrowLeft size={16} />
+              Back to Program Details
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="w-full bg-gradient-to-br from-indigo-50 via-white to-blue-50 py-16">
         <div className="max-w-4xl mx-auto px-6 text-center">
@@ -293,19 +316,19 @@ export default function ApplyPage() {
               </div>
               <h3 className="font-semibold mb-2">Career Support</h3>
               <p className="text-sm text-muted-foreground">
-                Resume reviews, interview preparation, and networking opportunities with industry partners.
+                Resume reviews, interview preparation, and networking opportunities in a supportive community.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Testimonial Section */}
+      {/* Join Our Community Section */}
       <section className="w-full bg-gray-50 py-16">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="relative h-[400px] rounded-lg overflow-hidden shadow-xl">
-              <Image src="/placeholder.svg?key=0yshi" alt="GRC Program Graduates" fill className="object-cover" />
+              <Image src="/people-collaborating-office.jpg" alt="GRC Program Graduates" fill className="object-cover" />
             </div>
             <div>
               <h2 className="text-3xl font-bold mb-6">Join Our Growing Community</h2>
@@ -313,22 +336,6 @@ export default function ApplyPage() {
                 Our graduates have successfully transitioned into GRC roles at companies across various industries,
                 including finance, healthcare, and technology.
               </p>
-              <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-                <p className="italic text-muted-foreground mb-4">
-                  "The TEFY GRC program was the best investment I've made in my career. The hands-on approach and
-                  supportive community helped me land a role as a Compliance Analyst within weeks of completing the
-                  program."
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative">
-                    <Image src="/professional-headshot.png" alt="David M." fill className="object-cover" />
-                  </div>
-                  <div>
-                    <p className="font-medium">David M.</p>
-                    <p className="text-sm text-muted-foreground">GRC Analyst, Financial Services</p>
-                  </div>
-                </div>
-              </div>
               <div className="flex justify-center">
                 <a
                   href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
@@ -367,8 +374,8 @@ export default function ApplyPage() {
               <h3 className="font-semibold mb-2">How does the internship work?</h3>
               <p className="text-muted-foreground">
                 The 4-week internship follows the main program and provides hands-on experience with real-world GRC
-                projects. You'll work with our industry partners on compliance documentation, risk assessments, and
-                more.
+                projects. You'll work on compliance documentation, risk assessments, and more. You will also get close
+                mentoring and career support.
               </p>
             </div>
           </div>
