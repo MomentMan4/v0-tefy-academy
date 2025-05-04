@@ -2,10 +2,10 @@ import "./globals.css"
 import type { ReactNode } from "react"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
-import CookieBanner from "@/components/CookieBanner"
-import ConditionalAnalytics from "@/components/ConditionalAnalytics"
 import { Suspense } from "react"
 import Script from "next/script"
+import CookieBanner from "@/components/CookieBanner"
+import ConditionalAnalytics from "@/components/ConditionalAnalytics"
 
 export const metadata = {
   title: "TEFY Digital Academy – Cybersecurity GRC Program",
