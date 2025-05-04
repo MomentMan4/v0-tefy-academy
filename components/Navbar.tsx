@@ -11,7 +11,6 @@ const navLinks = [
   { label: "Home", href: "/" },
   { label: "Program", href: "/program" },
   { label: "Assessment", href: "/assessment" },
-  { label: "Apply", href: "/apply" },
 ]
 
 export default function Navbar() {
@@ -47,7 +46,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Menu */}
-        <nav className="hidden md:flex gap-6">
+        <nav className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -59,15 +58,27 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-        </nav>
 
-        <div className="hidden md:block">
-          <Button size="sm" asChild>
-            <a href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat" target="_blank" rel="noopener noreferrer">
-              Book a Call
-            </a>
+          {/* Consultation Button */}
+          <a
+            href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+          >
+            Book a Call
+          </a>
+
+          {/* Apply Button - More Prominent */}
+          <Button
+            size="sm"
+            variant="default"
+            asChild
+            className="bg-primary hover:bg-primary/90 font-medium px-6 shadow-sm"
+          >
+            <Link href="/apply">Apply Now</Link>
           </Button>
-        </div>
+        </nav>
 
         {/* Mobile Hamburger */}
         <button
@@ -95,14 +106,17 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <Button size="sm" asChild className="mt-2" onClick={() => setOpen(false)}>
-              <a
-                href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Book a Call
-              </a>
+            <a
+              href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              onClick={() => setOpen(false)}
+            >
+              Book a Call
+            </a>
+            <Button className="mt-2 w-full" onClick={() => setOpen(false)} asChild>
+              <Link href="/apply">Apply Now</Link>
             </Button>
           </nav>
         </div>
