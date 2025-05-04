@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Share2 } from "lucide-react"
+import { ArrowLeft, Share2, Award, ChevronRight } from "lucide-react"
 import ResultChart from "@/components/ResultChart"
 import PDFDownloadButton from "@/components/PDFDownloadButton"
 import SendEmailButton from "@/components/SendEmailButton"
@@ -88,6 +88,11 @@ export default function ResultsClient() {
         // Calculate results
         const assessmentResult = calculateAssessmentResult(parsedAnswers)
         setResult(assessmentResult)
+
+        // Store roles data in window for PDF generation
+        if (typeof window !== "undefined") {
+          window.assessmentRolesData = assessmentResult.matchedRoles
+        }
 
         // Log to Supabase
         if (parsedUserInfo && assessmentResult) {
@@ -193,12 +198,41 @@ export default function ResultsClient() {
         </Button>
       </div>
 
+      {/* User info for PDF (hidden in UI) */}
+      <div className="hidden" data-user-info>
+        <h2>Assessment Results for {userInfo.name}</h2>
+        <p>Email: {userInfo.email}</p>
+        <p>Industry: {userInfo.industry}</p>
+      </div>
+
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">Your GRC Career Assessment Results</h1>
         <p className="text-muted-foreground">
           Based on your responses, here&apos;s how you align with cybersecurity GRC roles
         </p>
       </div>
+
+      {/* Score card that appears at the top */}
+      <Card className="border-2 border-primary/20 bg-primary/5">
+        <CardContent className="pt-6">
+          <div className="text-center" data-user-score>
+            <div className="inline-flex items-center justify-center p-4 bg-primary/10 rounded-full mb-4">
+              <Award size={32} className="text-primary" />
+            </div>
+            <h2 className="text-3xl font-bold text-primary">{finalScore}%</h2>
+            <p className="text-lg font-medium mt-1">
+              {finalScore >= 80 ? "Excellent Match" : finalScore >= 70 ? "Strong Match" : "Potential Match"}
+            </p>
+            <p className="text-muted-foreground mt-1">
+              {finalScore >= 80
+                ? "You're well-positioned for GRC roles"
+                : finalScore >= 70
+                  ? "You have good alignment with GRC careers"
+                  : "Consider bridge roles to build relevant experience"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-8">
@@ -210,14 +244,8 @@ export default function ResultsClient() {
         <TabsContent value="overview" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-center">Your GRC Readiness Score: {finalScore}%</CardTitle>
-              <CardDescription className="text-center">
-                {finalScore >= 80
-                  ? "Excellent match! You're well-positioned for GRC roles."
-                  : finalScore >= 70
-                    ? "Strong match! You have good alignment with GRC careers."
-                    : "You have potential! Consider bridge roles to build relevant experience."}
-              </CardDescription>
+              <CardTitle>Your GRC Readiness Assessment</CardTitle>
+              <CardDescription>This chart shows your overall alignment with key GRC competency areas</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <ResultChart answers={answers} />
@@ -233,12 +261,41 @@ export default function ResultsClient() {
             </CardContent>
           </Card>
 
+          {/* Dynamic Role Display for scores above 70% */}
+          {finalScore >= 70 && !isBridge && (
+            <Card className="border-2 border-green-100 bg-green-50">
+              <CardHeader>
+                <CardTitle className="text-green-800">Your Top Role Matches</CardTitle>
+                <CardDescription>Based on your assessment, these roles align well with your profile</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {matchedRoles.slice(0, 3).map((role, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-800 font-bold">
+                        {index + 1}
+                      </div>
+                      <div className="flex-grow">
+                        <h4 className="font-medium">{role.title}</h4>
+                        <p className="text-sm text-muted-foreground line-clamp-1">{role.description}</p>
+                      </div>
+                      <Button variant="ghost" size="sm" className="flex-shrink-0" onClick={() => setActiveTab("roles")}>
+                        <ChevronRight size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex flex-col md:flex-row justify-center gap-4 mt-8">
             <PDFDownloadButton />
             <SendEmailButton
               email={userInfo.email}
               name={userInfo.name}
               topRoles={topRoleNames}
+              score={finalScore}
               radarScores={radarScores}
             />
           </div>
@@ -283,33 +340,38 @@ export default function ResultsClient() {
             <CardContent>
               <div className="space-y-6">
                 {matchedRoles.map((role, index) => (
-                  <div key={index} className="border rounded-lg p-4">
-                    <h3 className="text-lg font-medium">{role.title}</h3>
-                    <p className="text-muted-foreground mt-1">{role.description}</p>
+                  <div key={index} className="border rounded-lg p-4 hover:border-primary/50 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        {index + 1}
+                      </div>
+                      <h3 className="text-lg font-medium">{role.title}</h3>
+                    </div>
+                    <p className="text-muted-foreground mb-4">{role.description}</p>
                     {!isBridge && (
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="font-medium">Skills Needed:</p>
-                          <ul className="list-disc ml-5">
+                        <div className="bg-gray-50 p-3 rounded-md">
+                          <p className="font-medium text-primary mb-2">Skills Needed:</p>
+                          <ul className="list-disc ml-5 space-y-1">
                             {role.skillsNeeded.map((skill: string, i: number) => (
                               <li key={i}>{skill}</li>
                             ))}
                           </ul>
                         </div>
-                        <div>
-                          <p className="font-medium">Typical Salary Range:</p>
+                        <div className="bg-gray-50 p-3 rounded-md">
+                          <p className="font-medium text-primary mb-2">Typical Salary Range:</p>
                           <p>{role.salaryRange}</p>
-                          <p className="font-medium mt-2">Recommended Certifications:</p>
+                          <p className="font-medium text-primary mt-3 mb-1">Recommended Certifications:</p>
                           <p>{role.recommendedCerts.join(", ")}</p>
                         </div>
                       </div>
                     )}
                     {isBridge && (
-                      <div className="mt-4 text-sm">
-                        <p className="font-medium">Typical Career Path:</p>
+                      <div className="mt-4 text-sm bg-gray-50 p-3 rounded-md">
+                        <p className="font-medium text-primary mb-2">Typical Career Path:</p>
                         <p>{role.entryPath}</p>
-                        <p className="font-medium mt-2">Skills to Develop:</p>
-                        <ul className="list-disc ml-5">
+                        <p className="font-medium text-primary mt-3 mb-1">Skills to Develop:</p>
+                        <ul className="list-disc ml-5 space-y-1">
                           {role.skillsToAcquire.map((skill: string, i: number) => (
                             <li key={i}>{skill}</li>
                           ))}

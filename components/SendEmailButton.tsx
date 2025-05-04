@@ -8,10 +8,11 @@ interface SendEmailButtonProps {
   email: string
   name: string
   topRoles: string[]
+  score: number
   radarScores?: { skill: string; value: number }[]
 }
 
-export default function SendEmailButton({ email, name, topRoles, radarScores }: SendEmailButtonProps) {
+export default function SendEmailButton({ email, name, topRoles, score, radarScores }: SendEmailButtonProps) {
   const [sent, setSent] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -30,6 +31,7 @@ export default function SendEmailButton({ email, name, topRoles, radarScores }: 
           email,
           name,
           topRoles: topRoles.slice(0, 3), // Ensure we only send top 3 roles
+          score,
           radarScores: radarScores || [],
         }),
       })

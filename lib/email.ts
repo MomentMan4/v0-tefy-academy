@@ -31,28 +31,69 @@ export async function sendResultsEmail(
 ) {
   try {
     // Create HTML email content directly instead of using React components
-    // This avoids the "getOwner is not a function" error
-    const rolesList = topRoles.map((role, i) => `<li><strong>${role}</strong></li>`).join("")
+    const rolesList = topRoles.map((role) => `<li><strong>${role}</strong></li>`).join("")
+
+    // Create skills section if radar scores are available
+    let skillsSection = ""
+    if (radarScores && radarScores.length > 0) {
+      const skillItems = radarScores
+        .map(
+          (skill) => `
+        <div style="margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span><strong>${skill.skill}</strong></span>
+            <span>${skill.value}%</span>
+          </div>
+          <div style="background-color: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
+            <div style="background-color: #3b82f6; height: 100%; width: ${skill.value}%;"></div>
+          </div>
+        </div>
+      `,
+        )
+        .join("")
+
+      skillsSection = `
+        <div style="margin: 20px 0;">
+          <h3 style="margin-bottom: 15px;">Your GRC Strength Profile:</h3>
+          ${skillItems}
+        </div>
+      `
+    }
 
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Hello ${name},</h2>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1f2937; margin-bottom: 10px;">Your GRC Assessment Results</h1>
+          <p style="color: #6b7280;">Thank you for completing the TEFY Digital Academy assessment!</p>
+        </div>
         
-        <p>🎉 Thanks for taking the Cybersecurity GRC Career Assessment!</p>
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h2 style="color: #1f2937; margin-top: 0;">Hello ${name},</h2>
+          <p>We're excited to share your personalized Cybersecurity GRC career assessment results.</p>
+        </div>
         
-        <p><strong>Your Top Matched Roles:</strong></p>
-        <ul>
-          ${rolesList}
-        </ul>
+        <div style="margin-bottom: 20px;">
+          <h3 style="color: #1f2937;">Your Top Matched Roles:</h3>
+          <ul style="padding-left: 20px;">
+            ${rolesList}
+          </ul>
+        </div>
         
-        <p><strong>Here's what you can do next:</strong></p>
-        <ol>
-          <li><a href="https://academy.tefydigital.com/program">Explore the Full Program Curriculum</a></li>
-          <li><a href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat">Book a Free 1:1 Info Session</a></li>
-          <li><a href="https://academy.tefydigital.com/resources">Browse GRC Resources</a></li>
-        </ol>
+        ${skillsSection}
         
-        <p style="margin-top: 30px;">– The TEFY Academy Team</p>
+        <div style="background-color: #dbeafe; padding: 15px; border-radius: 8px; margin: 25px 0;">
+          <h3 style="color: #1e40af; margin-top: 0;">Next Steps:</h3>
+          <ol style="padding-left: 20px; margin-bottom: 0;">
+            <li><a href="https://academy.tefydigital.com/program" style="color: #2563eb;">Explore our comprehensive GRC Program</a></li>
+            <li><a href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat" style="color: #2563eb;">Book a free consultation with a GRC advisor</a></li>
+            <li><a href="https://academy.tefydigital.com/apply" style="color: #2563eb;">Apply for the upcoming cohort</a></li>
+          </ol>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 14px;">© ${new Date().getFullYear()} TEFY Digital Academy</p>
+          <p style="color: #6b7280; font-size: 14px;">Your path to a career in Cybersecurity GRC</p>
+        </div>
       </div>
     `
 

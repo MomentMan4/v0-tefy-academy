@@ -70,45 +70,132 @@ export default function PDFDownloadButton() {
     }
 
     try {
-      const element = document.getElementById("assessment-result-pdf")
-      if (!element) {
+      // Get the original element
+      const originalElement = document.getElementById("assessment-result-pdf")
+      if (!originalElement) {
         setError("Could not find content to generate PDF.")
         setIsGenerating(false)
         return
       }
 
-      // Create a deep clone to avoid modifying the original
-      const clone = element.cloneNode(true) as HTMLElement
+      // Create a container for our PDF content
+      const pdfContainer = document.createElement("div")
+      pdfContainer.style.position = "absolute"
+      pdfContainer.style.left = "-9999px"
+      pdfContainer.style.top = "0"
+      pdfContainer.style.width = "800px" // Fixed width for better PDF layout
+      pdfContainer.style.padding = "20px"
+      pdfContainer.style.backgroundColor = "white"
+      pdfContainer.style.fontFamily = "Arial, sans-serif"
+      document.body.appendChild(pdfContainer)
 
-      // Add TEFY branding
-      const footer = document.createElement("div")
-      footer.innerHTML = `
-        <div style="text-align: center; margin-top: 20px; padding-top: 10px; border-top: 1px solid #eee;">
-          <p style="color: #666; font-size: 12px;">© ${new Date().getFullYear()} TEFY Digital Academy</p>
-          <p style="color: #666; font-size: 12px;">Your path to a career in Cybersecurity GRC</p>
+      // Create header with TEFY branding
+      const header = document.createElement("div")
+      header.innerHTML = `
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="color: #333; font-size: 24px; margin-bottom: 5px;">GRC Career Assessment Results</h1>
+          <p style="color: #666; font-size: 14px;">TEFY Digital Academy</p>
         </div>
       `
-      clone.appendChild(footer)
+      pdfContainer.appendChild(header)
 
-      // Hide the clone off-screen
-      clone.style.position = "absolute"
-      clone.style.left = "-9999px"
-      document.body.appendChild(clone)
+      // Get user info and score
+      const userInfoElement = originalElement.querySelector("[data-user-info]")
+      const scoreElement = originalElement.querySelector("[data-user-score]")
+
+      if (userInfoElement) {
+        const userInfoContent = document.createElement("div")
+        userInfoContent.innerHTML = userInfoElement.innerHTML
+        userInfoContent.style.marginBottom = "20px"
+        pdfContainer.appendChild(userInfoContent)
+      }
+
+      if (scoreElement) {
+        const scoreContent = document.createElement("div")
+        scoreContent.innerHTML = scoreElement.innerHTML
+        scoreContent.style.marginBottom = "20px"
+        pdfContainer.appendChild(scoreContent)
+      }
+
+      // Get the skills radar data
+      const radarData = window.assessmentRadarData || []
+
+      // Create skills section
+      const skillsSection = document.createElement("div")
+      skillsSection.innerHTML = `
+        <h2 style="color: #333; font-size: 18px; margin-bottom: 10px;">Your GRC Skills Profile</h2>
+      `
+
+      // Add skills bars instead of chart (more reliable for PDF)
+      radarData.forEach((skill: any) => {
+        const skillBar = document.createElement("div")
+        skillBar.style.marginBottom = "10px"
+        skillBar.innerHTML = `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span style="font-weight: bold;">${skill.skill}</span>
+            <span>${skill.value}%</span>
+          </div>
+          <div style="width: 100%; background-color: #eee; height: 10px; border-radius: 5px;">
+            <div style="width: ${skill.value}%; background-color: #6366f1; height: 10px; border-radius: 5px;"></div>
+          </div>
+        `
+        skillsSection.appendChild(skillBar)
+      })
+
+      pdfContainer.appendChild(skillsSection)
+
+      // Get the roles data
+      const rolesData = window.assessmentRolesData || []
+
+      // Create roles section
+      const rolesSection = document.createElement("div")
+      rolesSection.innerHTML = `
+        <h2 style="color: #333; font-size: 18px; margin: 20px 0 10px;">Your Top Role Matches</h2>
+      `
+
+      // Add roles
+      rolesData.forEach((role: any, index: number) => {
+        const roleCard = document.createElement("div")
+        roleCard.style.marginBottom = "15px"
+        roleCard.style.padding = "10px"
+        roleCard.style.border = "1px solid #ddd"
+        roleCard.style.borderRadius = "5px"
+
+        roleCard.innerHTML = `
+          <h3 style="margin: 0 0 5px; color: #333;">${index + 1}. ${role.title}</h3>
+          <p style="margin: 0 0 10px; color: #666; font-size: 14px;">${role.description}</p>
+        `
+
+        rolesSection.appendChild(roleCard)
+      })
+
+      pdfContainer.appendChild(rolesSection)
+
+      // Add footer
+      const footer = document.createElement("div")
+      footer.innerHTML = `
+        <div style="margin-top: 30px; padding-top: 10px; border-top: 1px solid #eee; text-align: center;">
+          <p style="color: #666; font-size: 12px;">© ${new Date().getFullYear()} TEFY Digital Academy</p>
+          <p style="color: #666; font-size: 12px;">Your path to a career in Cybersecurity GRC</p>
+          <p style="color: #666; font-size: 12px;">www.tefydigital.com</p>
+        </div>
+      `
+      pdfContainer.appendChild(footer)
 
       // Configure PDF options
       const opt = {
-        margin: 0.5,
+        margin: 10,
         filename: "GRC_Assessment_Results.pdf",
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+        html2canvas: { scale: 2, useCORS: true, logging: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       }
 
       // Generate PDF
-      await window.html2pdf().from(clone).set(opt).save()
+      await window.html2pdf().from(pdfContainer).set(opt).save()
 
       // Clean up
-      document.body.removeChild(clone)
+      document.body.removeChild(pdfContainer)
       setIsGenerating(false)
     } catch (err) {
       console.error("PDF generation error:", err)

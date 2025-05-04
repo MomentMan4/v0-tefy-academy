@@ -20,7 +20,9 @@ export default function SkillsRadarChart({ data }: { data: { skill: string; valu
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [chartError, setChartError] = useState<string | null>(null)
+  const [useSimpleChart, setUseSimpleChart] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const chartAttempts = useRef(0)
 
   // Ensure data is valid
   const validData =
@@ -37,6 +39,13 @@ export default function SkillsRadarChart({ data }: { data: { skill: string; valu
           { skill: "Risk", value: 50 },
         ]
 
+  // Store data in window for PDF generation
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.assessmentRadarData = validData
+    }
+  }, [validData])
+
   useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -48,8 +57,17 @@ export default function SkillsRadarChart({ data }: { data: { skill: string; valu
 
       window.addEventListener("resize", checkMobile)
 
-      // Force a redraw after a short delay to ensure the chart renders
-      const timer = setTimeout(() => {
+      // Try to render the chart multiple times
+      const attemptRenderChart = () => {
+        if (chartAttempts.current >= 5) {
+          console.log("Maximum chart render attempts reached, using simple chart")
+          setUseSimpleChart(true)
+          return
+        }
+
+        chartAttempts.current += 1
+        console.log(`Chart render attempt ${chartAttempts.current}`)
+
         if (containerRef.current) {
           // Force a reflow
           const height = containerRef.current.offsetHeight
@@ -60,31 +78,46 @@ export default function SkillsRadarChart({ data }: { data: { skill: string; valu
             }
           }, 0)
         }
-      }, 500)
+      }
+
+      // Initial attempt
+      attemptRenderChart()
+
+      // Additional attempts with increasing delays
+      const timers = [
+        setTimeout(attemptRenderChart, 500),
+        setTimeout(attemptRenderChart, 1500),
+        setTimeout(attemptRenderChart, 3000),
+        setTimeout(attemptRenderChart, 6000),
+      ]
 
       return () => {
         window.removeEventListener("resize", checkMobile)
-        clearTimeout(timer)
+        timers.forEach((timer) => clearTimeout(timer))
       }
     } catch (error) {
       console.error("Error in chart initialization:", error)
-      setChartError("Failed to initialize chart. Please refresh the page.")
+      setChartError("Failed to initialize chart. Using simplified version.")
+      setUseSimpleChart(true)
     }
   }, [])
 
   // Fallback chart when Recharts fails
-  const renderFallbackChart = () => {
+  const renderSimpleChart = () => {
     return (
-      <div className="w-full h-full flex flex-col">
-        <h3 className="text-center mb-4">Your Skills Profile</h3>
+      <div className="w-full h-full flex flex-col p-4">
+        <h3 className="text-center mb-4 font-medium">Your Skills Profile</h3>
         {validData.map((item) => (
-          <div key={item.skill} className="mb-3">
+          <div key={item.skill} className="mb-4">
             <div className="flex justify-between mb-1">
-              <span>{item.skill}</span>
-              <span>{item.value}%</span>
+              <span className="font-medium">{item.skill}</span>
+              <span className="font-medium">{item.value}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${item.value}%` }}></div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div
+                className="bg-primary h-3 rounded-full transition-all duration-500"
+                style={{ width: `${item.value}%` }}
+              ></div>
             </div>
           </div>
         ))}
@@ -92,8 +125,8 @@ export default function SkillsRadarChart({ data }: { data: { skill: string; valu
     )
   }
 
-  if (chartError) {
-    return <div className="w-full h-80 border rounded-md p-4 bg-white">{renderFallbackChart()}</div>
+  if (chartError || useSimpleChart) {
+    return <div className="w-full h-auto min-h-[300px] border rounded-md bg-white">{renderSimpleChart()}</div>
   }
 
   if (!mounted) {
@@ -107,7 +140,7 @@ export default function SkillsRadarChart({ data }: { data: { skill: string; valu
   return (
     <div ref={containerRef} className="w-full h-80 border rounded-md p-4 bg-white">
       {/* Fallback content that will always be rendered but hidden when chart works */}
-      <div className="absolute opacity-0">{renderFallbackChart()}</div>
+      <div className="absolute opacity-0">{renderSimpleChart()}</div>
 
       <ResponsiveContainer width="100%" height="100%">
         {isMobile ? (
@@ -116,7 +149,7 @@ export default function SkillsRadarChart({ data }: { data: { skill: string; valu
             <YAxis domain={[0, 100]} />
             <Tooltip formatter={(value) => [`${value}%`, "Score"]} />
             <Legend />
-            <Bar dataKey="value" name="Skill Level" fill="#8884d8" />
+            <Bar dataKey="value" name="Skill Level" fill="#6366f1" />
           </BarChart>
         ) : (
           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={validData}>
@@ -125,7 +158,7 @@ export default function SkillsRadarChart({ data }: { data: { skill: string; valu
             <PolarRadiusAxis domain={[0, 100]} />
             <Tooltip formatter={(value) => [`${value}%`, "Score"]} />
             <Legend />
-            <Radar name="Skill Level" dataKey="value" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+            <Radar name="Skill Level" dataKey="value" stroke="#6366f1" fill="#6366f1" fillOpacity={0.6} />
           </RadarChart>
         )}
       </ResponsiveContainer>
