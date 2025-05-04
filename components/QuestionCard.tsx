@@ -23,7 +23,7 @@ export default function QuestionCard({ question, tooltip, options, selected, onS
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="text-muted-foreground">
+                  <button className="text-muted-foreground" type="button" aria-label="Show more information">
                     <HelpCircle size={16} />
                     <span className="sr-only">More information</span>
                   </button>

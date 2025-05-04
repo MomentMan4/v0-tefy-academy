@@ -6,6 +6,38 @@ interface ScoringResult {
   finalScore: number
   matchedRoles: any[]
   isBridge: boolean
+  radarScores: { skill: string; value: number }[]
+}
+
+const skillDimensions = {
+  Tech: [5, 7, 8],
+  Compliance: [9, 10, 12],
+  People: [13, 14, 15],
+  Risk: [2, 4, 11],
+  Process: [6, 17, 18],
+}
+
+function calculateRadarScores(userAnswers: number[]): { skill: string; value: number }[] {
+  const result: { skill: string; value: number }[] = []
+
+  for (const [skill, indices] of Object.entries(skillDimensions)) {
+    const total = indices.reduce((sum, i) => {
+      const questionIndex = i - 1
+      const questionWeight = questions[questionIndex]?.weight || 1
+      return sum + userAnswers[questionIndex] * questionWeight
+    }, 0)
+
+    const max = indices.reduce((sum, i) => {
+      const questionIndex = i - 1
+      const questionWeight = questions[questionIndex]?.weight || 1
+      return sum + 5 * questionWeight
+    }, 0)
+
+    const score = Math.round((total / max) * 100)
+    result.push({ skill, value: score })
+  }
+
+  return result
 }
 
 export function calculateAssessmentResult(answers: number[]): ScoringResult {
@@ -17,11 +49,15 @@ export function calculateAssessmentResult(answers: number[]): ScoringResult {
   const maxPossibleScore = questions.reduce((sum, q) => sum + 5 * q.weight, 0)
   const finalScore = Math.round((actualScore / maxPossibleScore) * 100)
 
+  // Calculate radar scores
+  const radarScores = calculateRadarScores(answers)
+
   if (finalScore < 70) {
     return {
       finalScore,
       matchedRoles: BRIDGE_ROLES,
       isBridge: true,
+      radarScores,
     }
   }
 
@@ -38,5 +74,6 @@ export function calculateAssessmentResult(answers: number[]): ScoringResult {
     finalScore,
     matchedRoles: matches,
     isBridge: false,
+    radarScores,
   }
 }

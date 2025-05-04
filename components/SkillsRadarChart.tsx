@@ -2,29 +2,40 @@
 
 import { useEffect, useState, useRef } from "react"
 import {
-  Radar,
   RadarChart,
+  BarChart,
+  Radar,
+  Bar,
+  ResponsiveContainer,
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
+  Tooltip,
+  Legend,
 } from "recharts"
 
-interface ResultChartProps {
-  answers: number[] // array of 20 scores (1–5)
-}
-
-export default function ResultChart({ answers }: ResultChartProps) {
+export default function SkillsRadarChart({ data }: { data: { skill: string; value: number }[] }) {
+  const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [chartError, setChartError] = useState<string | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Ensure data is valid
+  const validData =
+    Array.isArray(data) && data.length > 0
+      ? data.map((item) => ({
+          skill: item.skill || "Unknown",
+          value: typeof item.value === "number" ? item.value : 0,
+        }))
+      : [
+          { skill: "Tech", value: 50 },
+          { skill: "Process", value: 50 },
+          { skill: "People", value: 50 },
+          { skill: "Compliance", value: 50 },
+          { skill: "Risk", value: 50 },
+        ]
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -37,7 +48,7 @@ export default function ResultChart({ answers }: ResultChartProps) {
 
       window.addEventListener("resize", checkMobile)
 
-      // Force a redraw after a short delay
+      // Force a redraw after a short delay to ensure the chart renders
       const timer = setTimeout(() => {
         if (containerRef.current) {
           // Force a reflow
@@ -61,35 +72,19 @@ export default function ResultChart({ answers }: ResultChartProps) {
     }
   }, [])
 
-  // Ensure answers is valid
-  const validAnswers = Array.isArray(answers) && answers.length > 0 ? answers : Array(20).fill(3)
-
-  const groupScores = {
-    Tech: average(validAnswers.slice(4, 8)),
-    Process: average(validAnswers.slice(0, 4).concat(validAnswers.slice(9, 12))),
-    People: average(validAnswers.slice(12, 16)),
-    Compliance: average([8, 9, 10].map((i) => validAnswers[i] || 0)),
-    Risk: average([7, 11, 19].map((i) => validAnswers[i] || 0)),
-  }
-
-  const data = Object.entries(groupScores).map(([domain, value]) => ({
-    domain,
-    score: Math.round(value * 20), // convert to 0–100 scale
-  }))
-
   // Fallback chart when Recharts fails
   const renderFallbackChart = () => {
     return (
       <div className="w-full h-full flex flex-col">
-        <h3 className="text-center mb-4">Your Assessment Results</h3>
-        {data.map((item) => (
-          <div key={item.domain} className="mb-3">
+        <h3 className="text-center mb-4">Your Skills Profile</h3>
+        {validData.map((item) => (
+          <div key={item.skill} className="mb-3">
             <div className="flex justify-between mb-1">
-              <span>{item.domain}</span>
-              <span>{item.score}%</span>
+              <span>{item.skill}</span>
+              <span>{item.value}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${item.score}%` }}></div>
+              <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${item.value}%` }}></div>
             </div>
           </div>
         ))}
@@ -98,48 +93,42 @@ export default function ResultChart({ answers }: ResultChartProps) {
   }
 
   if (chartError) {
-    return <div className="h-[300px] w-full bg-white p-4 rounded-md shadow">{renderFallbackChart()}</div>
+    return <div className="w-full h-80 border rounded-md p-4 bg-white">{renderFallbackChart()}</div>
   }
 
   if (!mounted) {
     return (
-      <div className="h-[300px] w-full bg-white p-4 rounded-md shadow flex items-center justify-center">
+      <div className="w-full h-80 bg-muted/20 animate-pulse rounded-md flex items-center justify-center">
         <p className="text-muted-foreground">Loading chart...</p>
       </div>
     )
   }
 
   return (
-    <div ref={containerRef} className="h-[300px] w-full bg-white p-4 rounded-md shadow">
+    <div ref={containerRef} className="w-full h-80 border rounded-md p-4 bg-white">
       {/* Fallback content that will always be rendered but hidden when chart works */}
       <div className="absolute opacity-0">{renderFallbackChart()}</div>
 
       <ResponsiveContainer width="100%" height="100%">
         {isMobile ? (
-          <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-            <XAxis dataKey="domain" />
+          <BarChart data={validData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+            <XAxis dataKey="skill" />
             <YAxis domain={[0, 100]} />
             <Tooltip formatter={(value) => [`${value}%`, "Score"]} />
             <Legend />
-            <Bar dataKey="score" name="Score" fill="#8884d8" />
+            <Bar dataKey="value" name="Skill Level" fill="#8884d8" />
           </BarChart>
         ) : (
-          <RadarChart data={data}>
+          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={validData}>
             <PolarGrid />
-            <PolarAngleAxis dataKey="domain" />
-            <PolarRadiusAxis angle={30} domain={[0, 100]} />
+            <PolarAngleAxis dataKey="skill" />
+            <PolarRadiusAxis domain={[0, 100]} />
             <Tooltip formatter={(value) => [`${value}%`, "Score"]} />
             <Legend />
-            <Radar name="Score" dataKey="score" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+            <Radar name="Skill Level" dataKey="value" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
           </RadarChart>
         )}
       </ResponsiveContainer>
     </div>
   )
-}
-
-function average(values: number[]): number {
-  if (!values.length) return 0
-  const sum = values.reduce((a, b) => a + b, 0)
-  return sum / values.length
 }

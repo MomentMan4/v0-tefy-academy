@@ -3,14 +3,25 @@ import { sendResultsEmail } from "@/lib/email"
 
 export async function POST(req: Request) {
   try {
-    const { email, name, topRoles } = await req.json()
+    const { email, name, topRoles, radarScores } = await req.json()
 
-    if (!email || !name || !topRoles) {
-      return NextResponse.json({ status: "fail", message: "Missing required fields" }, { status: 400 })
+    if (!email || !name) {
+      return NextResponse.json({ status: "fail", message: "Email and name are required" }, { status: 400 })
     }
 
-    const result = await sendResultsEmail(email, name, topRoles)
-    return NextResponse.json({ status: result ? "ok" : "fail" })
+    // Ensure topRoles is an array
+    const validTopRoles =
+      Array.isArray(topRoles) && topRoles.length > 0
+        ? topRoles
+        : ["GRC Analyst", "Compliance Specialist", "Risk Coordinator"]
+
+    const result = await sendResultsEmail(email, name, validTopRoles, radarScores)
+
+    if (!result) {
+      return NextResponse.json({ status: "fail", message: "Failed to send email" }, { status: 500 })
+    }
+
+    return NextResponse.json({ status: "ok" })
   } catch (error) {
     console.error("Error sending email:", error)
     return NextResponse.json({ status: "fail", message: "Server error" }, { status: 500 })
