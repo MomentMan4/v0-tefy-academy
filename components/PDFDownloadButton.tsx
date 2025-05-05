@@ -100,36 +100,52 @@ export default function PDFDownloadButton() {
       pdfContainer.appendChild(header)
 
       // Get user info and score
-      const userInfoElement = originalElement.querySelector("[data-user-info]")
-      const scoreElement = originalElement.querySelector("[data-user-score]")
+      const userInfo = window.assessmentUserInfo || { name: "User", email: "user@example.com", industry: "Technology" }
+      const score = window.assessmentScore || 0
 
-      if (userInfoElement) {
-        const userInfoContent = document.createElement("div")
-        userInfoContent.innerHTML = userInfoElement.innerHTML
-        userInfoContent.style.marginBottom = "20px"
-        pdfContainer.appendChild(userInfoContent)
-      }
-
-      if (scoreElement) {
-        const scoreContent = document.createElement("div")
-        scoreContent.innerHTML = scoreElement.innerHTML
-        scoreContent.style.marginBottom = "20px"
-        pdfContainer.appendChild(scoreContent)
-      }
+      // Add user info section
+      const userInfoSection = document.createElement("div")
+      userInfoSection.innerHTML = `
+        <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+          <h2 style="margin-top: 0; font-size: 18px; color: #333;">Assessment Results for ${userInfo.name}</h2>
+          <p style="margin: 5px 0; color: #555;">Email: ${userInfo.email}</p>
+          <p style="margin: 5px 0; color: #555;">Industry: ${userInfo.industry}</p>
+          <div style="margin-top: 15px;">
+            <div style="font-size: 24px; font-weight: bold; color: #4f46e5;">${score}%</div>
+            <p style="margin: 5px 0; color: #555;">
+              ${score >= 80 ? "Excellent Match" : score >= 70 ? "Strong Match" : "Potential Match"}
+            </p>
+          </div>
+        </div>
+      `
+      pdfContainer.appendChild(userInfoSection)
 
       // Get the skills radar data
       const radarData = window.assessmentRadarData || []
+      const skillBreakdown = window.assessmentSkillBreakdown || []
+      const careerPathSuggestion = window.assessmentCareerPathSuggestion || ""
+      const recommendedCertifications = window.assessmentRecommendedCertifications || []
+
+      // Create career path suggestion section
+      const careerSection = document.createElement("div")
+      careerSection.innerHTML = `
+        <div style="margin: 20px 0; padding: 15px; background-color: #eef2ff; border-radius: 8px;">
+          <h3 style="margin-top: 0; font-size: 16px; color: #4338ca;">Career Path Suggestion</h3>
+          <p style="margin: 10px 0; color: #4338ca;">${careerPathSuggestion}</p>
+        </div>
+      `
+      pdfContainer.appendChild(careerSection)
 
       // Create skills section
       const skillsSection = document.createElement("div")
       skillsSection.innerHTML = `
-        <h2 style="color: #333; font-size: 18px; margin-bottom: 10px;">Your GRC Skills Profile</h2>
+        <h2 style="color: #333; font-size: 18px; margin: 25px 0 15px;">Your GRC Skills Profile</h2>
       `
 
-      // Add skills bars instead of chart (more reliable for PDF)
+      // Add skills bars
       radarData.forEach((skill: any) => {
         const skillBar = document.createElement("div")
-        skillBar.style.marginBottom = "10px"
+        skillBar.style.marginBottom = "15px"
         skillBar.innerHTML = `
           <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
             <span style="font-weight: bold;">${skill.skill}</span>
@@ -142,7 +158,46 @@ export default function PDFDownloadButton() {
         skillsSection.appendChild(skillBar)
       })
 
+      // Add skill breakdown
+      if (skillBreakdown.length > 0) {
+        const breakdownSection = document.createElement("div")
+        breakdownSection.innerHTML = `
+          <h3 style="color: #333; font-size: 16px; margin: 20px 0 10px;">Skill Breakdown</h3>
+        `
+
+        skillBreakdown.forEach((skill: any) => {
+          const skillDetail = document.createElement("div")
+          skillDetail.style.marginBottom = "15px"
+          skillDetail.style.padding = "10px"
+          skillDetail.style.backgroundColor = "#f8f9fa"
+          skillDetail.style.borderRadius = "5px"
+
+          skillDetail.innerHTML = `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <span style="font-weight: bold;">${skill.category}</span>
+              <span>${skill.score}%</span>
+            </div>
+            <p style="margin: 5px 0; color: #555; font-size: 13px;">${skill.description}</p>
+          `
+          breakdownSection.appendChild(skillDetail)
+        })
+
+        skillsSection.appendChild(breakdownSection)
+      }
+
       pdfContainer.appendChild(skillsSection)
+
+      // Add recommended certifications
+      if (recommendedCertifications.length > 0) {
+        const certSection = document.createElement("div")
+        certSection.innerHTML = `
+          <h3 style="color: #333; font-size: 16px; margin: 25px 0 10px;">Recommended Certifications</h3>
+          <ul style="padding-left: 20px; margin: 10px 0;">
+            ${recommendedCertifications.map((cert: string) => `<li style="margin-bottom: 8px;">${cert}</li>`).join("")}
+          </ul>
+        `
+        pdfContainer.appendChild(certSection)
+      }
 
       // Get the roles data
       const rolesData = window.assessmentRolesData || []
@@ -150,26 +205,68 @@ export default function PDFDownloadButton() {
       // Create roles section
       const rolesSection = document.createElement("div")
       rolesSection.innerHTML = `
-        <h2 style="color: #333; font-size: 18px; margin: 20px 0 10px;">Your Top Role Matches</h2>
+        <h2 style="color: #333; font-size: 18px; margin: 25px 0 15px;">Your Top Role Matches</h2>
       `
 
       // Add roles
       rolesData.forEach((role: any, index: number) => {
         const roleCard = document.createElement("div")
-        roleCard.style.marginBottom = "15px"
-        roleCard.style.padding = "10px"
+        roleCard.style.marginBottom = "20px"
+        roleCard.style.padding = "15px"
         roleCard.style.border = "1px solid #ddd"
         roleCard.style.borderRadius = "5px"
 
         roleCard.innerHTML = `
-          <h3 style="margin: 0 0 5px; color: #333;">${index + 1}. ${role.title}</h3>
+          <h3 style="margin: 0 0 10px; color: #333;">${index + 1}. ${role.title}</h3>
           <p style="margin: 0 0 10px; color: #666; font-size: 14px;">${role.description}</p>
+          ${role.matchPercent ? `<p style="margin: 5px 0; color: #4f46e5; font-weight: bold;">Match: ${role.matchPercent}%</p>` : ""}
+          
+          ${
+            role.skillsNeeded
+              ? `
+            <div style="margin-top: 10px;">
+              <p style="margin: 5px 0; font-weight: bold; color: #4f46e5;">Skills Needed:</p>
+              <ul style="margin: 5px 0; padding-left: 20px;">
+                ${role.skillsNeeded.map((skill: string) => `<li style="margin-bottom: 3px;">${skill}</li>`).join("")}
+              </ul>
+            </div>
+          `
+              : ""
+          }
+          
+          ${
+            role.skillsToAcquire
+              ? `
+            <div style="margin-top: 10px;">
+              <p style="margin: 5px 0; font-weight: bold; color: #4f46e5;">Skills to Develop:</p>
+              <ul style="margin: 5px 0; padding-left: 20px;">
+                ${role.skillsToAcquire.map((skill: string) => `<li style="margin-bottom: 3px;">${skill}</li>`).join("")}
+              </ul>
+            </div>
+          `
+              : ""
+          }
         `
 
         rolesSection.appendChild(roleCard)
       })
 
       pdfContainer.appendChild(rolesSection)
+
+      // Add next steps section
+      const nextStepsSection = document.createElement("div")
+      nextStepsSection.innerHTML = `
+        <div style="margin: 30px 0 20px; padding: 15px; background-color: #f0f9ff; border-radius: 8px;">
+          <h3 style="margin-top: 0; color: #0369a1; font-size: 16px;">Next Steps</h3>
+          <p style="margin: 10px 0; color: #0369a1;">Our 5-week GRC Program will help you build the skills needed for these roles, regardless of your starting point.</p>
+          <ul style="padding-left: 20px; margin: 10px 0;">
+            <li style="margin-bottom: 5px;">Apply for the TEFY GRC Program at academy.tefydigital.com/apply</li>
+            <li style="margin-bottom: 5px;">Book a free consultation with a GRC advisor</li>
+            <li style="margin-bottom: 5px;">Explore certification options based on your skill profile</li>
+          </ul>
+        </div>
+      `
+      pdfContainer.appendChild(nextStepsSection)
 
       // Add footer
       const footer = document.createElement("div")

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { CheckCircle, ArrowRight, Shield, Calendar, Users, ArrowLeft } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { savePartialApplication, markApplicationConverted } from "@/app/actions/applications"
 
 export default function ApplyPage() {
   const [includeInternship, setIncludeInternship] = useState(false)
@@ -20,12 +21,42 @@ export default function ApplyPage() {
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isStripeRedirect, setIsStripeRedirect] = useState(false)
+  const [applicationSaved, setApplicationSaved] = useState(false)
 
   useEffect(() => {
     // Check if this is a redirect from Stripe
     const urlParams = new URLSearchParams(window.location.search)
     if (urlParams.has("stripe_redirect")) {
       setIsStripeRedirect(true)
+
+      // If we have stored application data, mark it as converted
+      const storedData = localStorage.getItem("enrollment-data")
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData)
+          if (parsedData.email) {
+            markApplicationConverted(parsedData.email).catch((err) =>
+              console.error("Error marking application as converted:", err),
+            )
+          }
+        } catch (e) {
+          console.error("Error parsing stored enrollment data:", e)
+        }
+      }
+    }
+
+    // Check for saved application data
+    const storedData = localStorage.getItem("enrollment-data")
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData)
+        setFormData((prevData) => ({
+          ...prevData,
+          ...parsedData,
+        }))
+      } catch (e) {
+        console.error("Error parsing stored enrollment data:", e)
+      }
     }
   }, [])
 
@@ -34,16 +65,50 @@ export default function ApplyPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (step === 1 && (!formData.name || !formData.email)) {
       alert("Please enter your name and email")
       return
     }
-    setStep(2)
-    window.scrollTo(0, 0)
+
+    setIsSubmitting(true)
+
+    try {
+      // Save partial application data
+      const result = await savePartialApplication({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        completed: false,
+        step: 1,
+      })
+
+      if (result.success) {
+        setApplicationSaved(true)
+
+        // Store form data in localStorage for potential use later
+        localStorage.setItem("enrollment-data", JSON.stringify(formData))
+
+        // Proceed to next step
+        setStep(2)
+        window.scrollTo(0, 0)
+      } else {
+        console.error("Failed to save application:", result.error)
+        // Still proceed to next step even if saving fails
+        setStep(2)
+        window.scrollTo(0, 0)
+      }
+    } catch (error) {
+      console.error("Error saving application:", error)
+      // Still proceed to next step even if saving fails
+      setStep(2)
+      window.scrollTo(0, 0)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleApply = () => {
+  const handleApply = async () => {
     // Validate form
     if (!formData.name || !formData.email) {
       alert("Please enter your name and email")
@@ -52,15 +117,35 @@ export default function ApplyPage() {
 
     setIsSubmitting(true)
 
-    // Store form data in localStorage for potential use later
-    localStorage.setItem("enrollment-data", JSON.stringify(formData))
+    try {
+      // Update application with final step
+      await savePartialApplication({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        completed: false,
+        step: 2,
+      })
 
-    // Redirect to Stripe checkout
-    const url = includeInternship
-      ? "https://buy.stripe.com/cN2aGAg6U2mPdb2bIK?redirect_back=true"
-      : "https://buy.stripe.com/4gw9Cwf2Qd1tdb23cd?redirect_back=true"
+      // Store form data in localStorage for potential use later
+      localStorage.setItem("enrollment-data", JSON.stringify(formData))
 
-    window.location.href = url
+      // Redirect to Stripe checkout
+      const url = includeInternship
+        ? "https://buy.stripe.com/cN2aGAg6U2mPdb2bIK?redirect_back=true"
+        : "https://buy.stripe.com/4gw9Cwf2Qd1tdb23cd?redirect_back=true"
+
+      window.location.href = url
+    } catch (error) {
+      console.error("Error updating application before payment:", error)
+
+      // Still redirect to Stripe even if saving fails
+      const url = includeInternship
+        ? "https://buy.stripe.com/cN2aGAg6U2mPdb2bIK?redirect_back=true"
+        : "https://buy.stripe.com/4gw9Cwf2Qd1tdb23cd?redirect_back=true"
+
+      window.location.href = url
+    }
   }
 
   return (
@@ -175,8 +260,8 @@ export default function ApplyPage() {
                   />
                 </div>
 
-                <Button onClick={handleNextStep} className="w-full h-12 mt-4" size="lg">
-                  Continue <ArrowRight size={16} className="ml-2" />
+                <Button onClick={handleNextStep} className="w-full h-12 mt-4" size="lg" disabled={isSubmitting}>
+                  {isSubmitting ? "Processing..." : "Continue"} <ArrowRight size={16} className="ml-2" />
                 </Button>
               </div>
             </div>

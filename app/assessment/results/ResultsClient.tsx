@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@supabase/supabase-js"
-import { calculateAssessmentResult } from "@/lib/assessment/logic"
+import { calculateAssessmentResult, type ScoringResult } from "@/lib/assessment/logic"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Share2, Award, ChevronRight } from "lucide-react"
+import { ArrowLeft, Share2, Award, ChevronRight, Briefcase, FileText } from "lucide-react"
 import ResultChart from "@/components/ResultChart"
 import PDFDownloadButton from "@/components/PDFDownloadButton"
 import SendEmailButton from "@/components/SendEmailButton"
@@ -25,6 +25,9 @@ async function logAssessmentToSupabase({
   roles,
   isBridge,
   radarScores,
+  skillBreakdown,
+  recommendedCertifications,
+  careerPathSuggestion,
 }: {
   name: string
   email: string
@@ -33,6 +36,9 @@ async function logAssessmentToSupabase({
   roles: string[]
   isBridge: boolean
   radarScores: { skill: string; value: number }[]
+  skillBreakdown: { category: string; score: number; description: string }[]
+  recommendedCertifications: string[]
+  careerPathSuggestion: string
 }) {
   try {
     const { error } = await supabase.from("submissions").insert({
@@ -43,6 +49,9 @@ async function logAssessmentToSupabase({
       roles,
       is_bridge: isBridge,
       radar_scores: radarScores,
+      skill_breakdown: skillBreakdown,
+      recommended_certifications: recommendedCertifications,
+      career_path_suggestion: careerPathSuggestion,
     })
 
     if (error) {
@@ -56,12 +65,7 @@ async function logAssessmentToSupabase({
 export default function ResultsClient() {
   const [userInfo, setUserInfo] = useState<{ name: string; email: string; industry: string } | null>(null)
   const [answers, setAnswers] = useState<number[]>([])
-  const [result, setResult] = useState<{
-    finalScore: number
-    matchedRoles: any[]
-    isBridge: boolean
-    radarScores: { skill: string; value: number }[]
-  } | null>(null)
+  const [result, setResult] = useState<ScoringResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("overview")
@@ -89,9 +93,15 @@ export default function ResultsClient() {
         const assessmentResult = calculateAssessmentResult(parsedAnswers)
         setResult(assessmentResult)
 
-        // Store roles data in window for PDF generation
+        // Store data in window for PDF generation
         if (typeof window !== "undefined") {
           window.assessmentRolesData = assessmentResult.matchedRoles
+          window.assessmentRadarData = assessmentResult.radarScores
+          window.assessmentSkillBreakdown = assessmentResult.skillBreakdown
+          window.assessmentRecommendedCertifications = assessmentResult.recommendedCertifications
+          window.assessmentCareerPathSuggestion = assessmentResult.careerPathSuggestion
+          window.assessmentUserInfo = parsedUserInfo
+          window.assessmentScore = assessmentResult.finalScore
         }
 
         // Log to Supabase
@@ -105,6 +115,9 @@ export default function ResultsClient() {
             roles: roleNames,
             isBridge: assessmentResult.isBridge,
             radarScores: assessmentResult.radarScores,
+            skillBreakdown: assessmentResult.skillBreakdown,
+            recommendedCertifications: assessmentResult.recommendedCertifications,
+            careerPathSuggestion: assessmentResult.careerPathSuggestion,
           })
         }
       } catch (err) {
@@ -150,7 +163,15 @@ export default function ResultsClient() {
     )
   }
 
-  const { finalScore, matchedRoles, isBridge, radarScores } = result
+  const {
+    finalScore,
+    matchedRoles,
+    isBridge,
+    radarScores,
+    skillBreakdown,
+    recommendedCertifications,
+    careerPathSuggestion,
+  } = result
   const topRoleNames = matchedRoles.map((role) => role.title)
 
   return (
@@ -261,6 +282,19 @@ export default function ResultsClient() {
             </CardContent>
           </Card>
 
+          {/* Career Path Suggestion */}
+          <Card className="border-2 border-indigo-100 bg-indigo-50">
+            <CardHeader>
+              <CardTitle className="text-indigo-800 flex items-center gap-2">
+                <Briefcase size={20} />
+                Career Path Suggestion
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-indigo-700">{careerPathSuggestion}</p>
+            </CardContent>
+          </Card>
+
           {/* Dynamic Role Display for scores above 70% */}
           {finalScore >= 70 && !isBridge && (
             <Card className="border-2 border-green-100 bg-green-50">
@@ -289,6 +323,29 @@ export default function ResultsClient() {
             </Card>
           )}
 
+          {/* Recommended Certifications */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award size={20} />
+                Recommended Certifications
+              </CardTitle>
+              <CardDescription>
+                Based on your skills profile, these certifications may benefit your career
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {recommendedCertifications.map((cert, index) => (
+                  <li key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded-md">
+                    <FileText size={18} className="text-primary mt-0.5 flex-shrink-0" />
+                    <span>{cert}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
           <div className="flex flex-col md:flex-row justify-center gap-4 mt-8">
             <PDFDownloadButton />
             <SendEmailButton
@@ -297,6 +354,9 @@ export default function ResultsClient() {
               topRoles={topRoleNames}
               score={finalScore}
               radarScores={radarScores}
+              skillBreakdown={skillBreakdown}
+              recommendedCertifications={recommendedCertifications}
+              careerPathSuggestion={careerPathSuggestion}
             />
           </div>
         </TabsContent>
@@ -310,15 +370,19 @@ export default function ResultsClient() {
             <CardContent>
               <SkillsRadarChart data={radarScores} />
 
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {radarScores.map((skill) => (
-                  <div key={skill.skill} className="border rounded-md p-3">
-                    <div className="flex justify-between items-center mb-1">
-                      <h4 className="font-medium">{skill.skill}</h4>
-                      <span className="text-sm font-semibold">{skill.value}%</span>
+              <div className="mt-8 space-y-6">
+                <h3 className="text-lg font-medium">Skill Breakdown</h3>
+                {skillBreakdown.map((skill) => (
+                  <div key={skill.category} className="border rounded-md p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-medium text-lg">{skill.category}</h4>
+                      <span className="text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-full">
+                        {skill.score}%
+                      </span>
                     </div>
+                    <p className="text-muted-foreground mb-3">{skill.description}</p>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-primary h-2 rounded-full" style={{ width: `${skill.value}%` }}></div>
+                      <div className="bg-primary h-2 rounded-full" style={{ width: `${skill.score}%` }}></div>
                     </div>
                   </div>
                 ))}
@@ -346,6 +410,11 @@ export default function ResultsClient() {
                         {index + 1}
                       </div>
                       <h3 className="text-lg font-medium">{role.title}</h3>
+                      {!isBridge && (
+                        <span className="ml-auto text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
+                          {role.matchPercent}% Match
+                        </span>
+                      )}
                     </div>
                     <p className="text-muted-foreground mb-4">{role.description}</p>
                     {!isBridge && (
