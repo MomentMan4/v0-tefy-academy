@@ -3,6 +3,9 @@ import { redirect } from "next/navigation"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import AdminLayoutClient from "./components/AdminLayoutClient"
 
+// Force dynamic rendering for all admin pages
+export const dynamic = "force-dynamic"
+
 // Check if we're in a preview environment
 const isPreviewEnvironment = process.env.VERCEL_ENV === "preview" || process.env.NODE_ENV === "development"
 

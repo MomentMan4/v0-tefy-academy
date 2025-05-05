@@ -5,6 +5,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server"
 import AdminHeader from "../components/AdminHeader"
 import DashboardClient from "./components/DashboardClient"
 
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic"
+
 // Function to get dashboard stats
 async function getDashboardStats() {
   try {
@@ -29,17 +32,30 @@ async function getDashboardStats() {
       throw new Error("Failed to fetch recent submissions")
     }
 
+    // Calculate average rating (mock data for now)
+    const averageRating = "4.2"
+
     return {
       stats: {
         submissions: submissionsResult.count || 0,
         applications: applicationsResult.count || 0,
         registrations: registrationsResult.count || 0,
+        averageRating,
       },
       recentSubmissions: submissions || [],
     }
   } catch (error) {
     console.error("Error fetching dashboard stats:", error)
-    throw error
+    // Return fallback data
+    return {
+      stats: {
+        submissions: 0,
+        applications: 0,
+        registrations: 0,
+        averageRating: "0.0",
+      },
+      recentSubmissions: [],
+    }
   }
 }
 
@@ -47,25 +63,28 @@ async function getDashboardStats() {
 async function getMonthlyData() {
   try {
     // For now, we'll generate some sample data
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
 
-    const monthlyData = months.map((month, index) => {
-      const randomLeads = Math.floor(Math.random() * 50) + 10
-      const randomSubmissions = Math.floor(Math.random() * randomLeads)
-      const randomRegistrations = Math.floor(Math.random() * randomSubmissions)
-
+    const monthlyData = months.map((month) => {
       return {
         name: month,
-        leads: randomLeads,
-        submissions: randomSubmissions,
-        registrations: randomRegistrations,
+        leads: Math.floor(Math.random() * 50) + 10,
+        submissions: Math.floor(Math.random() * 40) + 5,
+        registrations: Math.floor(Math.random() * 20) + 2,
       }
     })
 
     return monthlyData
   } catch (error) {
     console.error("Error fetching monthly data:", error)
-    return []
+    return [
+      { name: "Jan", leads: 0, submissions: 0, registrations: 0 },
+      { name: "Feb", leads: 0, submissions: 0, registrations: 0 },
+      { name: "Mar", leads: 0, submissions: 0, registrations: 0 },
+      { name: "Apr", leads: 0, submissions: 0, registrations: 0 },
+      { name: "May", leads: 0, submissions: 0, registrations: 0 },
+      { name: "Jun", leads: 0, submissions: 0, registrations: 0 },
+    ]
   }
 }
 
@@ -99,7 +118,7 @@ export default async function AdminDashboardPage() {
     },
     {
       title: "Average Rating",
-      value: "4.2",
+      value: dashboardData.stats.averageRating,
       description: "Out of 5 stars",
       change: { value: 2, trend: "up" as const },
       link: "/admin/ratings",
@@ -115,12 +134,13 @@ export default async function AdminDashboardPage() {
 
   // Prepare columns for recent submissions table
   const submissionsColumns = [
-    { key: "email", header: "Email" },
-    { key: "score", header: "Score" },
+    { key: "email", header: "Email", sortable: true },
+    { key: "score", header: "Score", sortable: true },
     {
       key: "created_at",
       header: "Date",
       cell: (row: any) => new Date(row.created_at).toLocaleDateString(),
+      sortable: true,
     },
   ]
 

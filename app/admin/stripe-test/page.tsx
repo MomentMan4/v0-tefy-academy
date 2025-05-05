@@ -1,15 +1,19 @@
 "use client"
 
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic"
+
 import type React from "react"
 
 import { useState } from "react"
-import { CreditCard, Check, AlertCircle } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CreditCard, Check, AlertCircle, ArrowRight } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 
 export default function StripeTestPage() {
   const [activeTab, setActiveTab] = useState("checkout")
@@ -21,8 +25,8 @@ export default function StripeTestPage() {
     amount: "700",
     currency: "usd",
     productName: "GRC Program",
-    successUrl: "http://localhost:3000/admin/stripe-test?success=true",
-    cancelUrl: "http://localhost:3000/admin/stripe-test?canceled=true",
+    successUrl: typeof window !== "undefined" ? `${window.location.origin}/admin/stripe-test?success=true` : "",
+    cancelUrl: typeof window !== "undefined" ? `${window.location.origin}/admin/stripe-test?canceled=true` : "",
   })
 
   // Webhook test form state
@@ -61,12 +65,21 @@ export default function StripeTestPage() {
     setResult(null)
 
     try {
+      // Validate amount is a number
+      const amount = Number.parseFloat(checkoutForm.amount)
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error("Please enter a valid positive number for the amount")
+      }
+
       const response = await fetch("/api/admin/stripe/create-checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(checkoutForm),
+        body: JSON.stringify({
+          ...checkoutForm,
+          amount: amount.toString(), // Ensure it's a string but validated as a number
+        }),
       })
 
       const data = await response.json()
@@ -88,10 +101,10 @@ export default function StripeTestPage() {
           message: data.error || "Failed to create checkout session",
         })
       }
-    } catch (error) {
+    } catch (error: any) {
       setResult({
         success: false,
-        message: "An unexpected error occurred",
+        message: error.message || "An unexpected error occurred",
       })
     } finally {
       setIsLoading(false)
@@ -104,12 +117,21 @@ export default function StripeTestPage() {
     setResult(null)
 
     try {
+      // Validate amount is a number
+      const amount = Number.parseFloat(webhookForm.amount)
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error("Please enter a valid positive number for the amount")
+      }
+
       const response = await fetch("/api/admin/stripe/test-webhook", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(webhookForm),
+        body: JSON.stringify({
+          ...webhookForm,
+          amount: amount.toString(), // Ensure it's a string but validated as a number
+        }),
       })
 
       const data = await response.json()
@@ -126,10 +148,10 @@ export default function StripeTestPage() {
           message: data.error || "Failed to test webhook",
         })
       }
-    } catch (error) {
+    } catch (error: any) {
       setResult({
         success: false,
-        message: "An unexpected error occurred",
+        message: error.message || "An unexpected error occurred",
       })
     } finally {
       setIsLoading(false)
@@ -139,7 +161,16 @@ export default function StripeTestPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Stripe Test Interface</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Stripe Test Interface</h1>
+          <p className="text-muted-foreground mt-1">Test Stripe integration for payment processing</p>
+        </div>
+        <Button asChild variant="outline">
+          <a href="https://dashboard.stripe.com/test/dashboard" target="_blank" rel="noopener noreferrer">
+            Stripe Dashboard
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </a>
+        </Button>
       </div>
 
       <Tabs defaultValue="checkout" value={activeTab} onValueChange={setActiveTab}>
@@ -158,13 +189,21 @@ export default function StripeTestPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount</Label>
-                  <Input
-                    id="amount"
-                    name="amount"
-                    value={checkoutForm.amount}
-                    onChange={handleCheckoutChange}
-                    placeholder="700"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                    <Input
+                      id="amount"
+                      name="amount"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={checkoutForm.amount}
+                      onChange={handleCheckoutChange}
+                      placeholder="700"
+                      className="pl-8"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Enter amount in dollars (e.g., 700 for $700.00)</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency</Label>
@@ -195,6 +234,8 @@ export default function StripeTestPage() {
                   placeholder="GRC Program"
                 />
               </div>
+
+              <Separator className="my-4" />
 
               <div className="space-y-2">
                 <Label htmlFor="successUrl">Success URL</Label>
@@ -271,14 +312,22 @@ export default function StripeTestPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount (in cents)</Label>
-                <Input
-                  id="amount"
-                  name="amount"
-                  value={webhookForm.amount}
-                  onChange={handleWebhookChange}
-                  placeholder="70000"
-                />
+                <Label htmlFor="webhookAmount">Amount (in dollars)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                  <Input
+                    id="webhookAmount"
+                    name="amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={webhookForm.amount}
+                    onChange={handleWebhookChange}
+                    placeholder="700"
+                    className="pl-8"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Enter amount in dollars (e.g., 700 for $700.00)</p>
               </div>
 
               <Button className="w-full" onClick={testWebhook} disabled={isLoading}>
@@ -316,6 +365,15 @@ export default function StripeTestPage() {
               </pre>
             )}
           </CardContent>
+          <CardFooter>
+            {result.success && result.data?.url && (
+              <Button asChild className="w-full">
+                <a href={result.data.url} target="_blank" rel="noopener noreferrer">
+                  Open Checkout Page
+                </a>
+              </Button>
+            )}
+          </CardFooter>
         </Card>
       )}
     </div>

@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation"
 
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic"
+
 export default function AdminLoginRedirect() {
-  redirect("/auth/admin-login")
+  // Use a server-side redirect
+  return redirect("/auth/admin-login")
 }

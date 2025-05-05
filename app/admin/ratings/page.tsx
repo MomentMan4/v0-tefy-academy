@@ -1,3 +1,6 @@
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic"
+
 import { Suspense } from "react"
 import { Star, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"

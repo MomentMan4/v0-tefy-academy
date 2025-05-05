@@ -1,3 +1,6 @@
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic"
+
 import { Suspense } from "react"
 import { FileText, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -22,8 +25,9 @@ async function getSubmissions() {
   }
 }
 
-export default async function SubmissionsPage() {
-  const submissions = await getSubmissions()
+export default function SubmissionsPage() {
+  // Your existing code...
+  const getSubmissionsPromise = getSubmissions()
 
   // Prepare columns for submissions table
   const columns = [
@@ -76,7 +80,7 @@ export default async function SubmissionsPage() {
       <Suspense fallback={<div className="h-[500px] flex items-center justify-center">Loading submissions...</div>}>
         <Table
           columns={columns}
-          data={submissions}
+          data={getSubmissionsPromise}
           title="Assessment Submissions"
           emptyState={
             <div className="text-center py-8">

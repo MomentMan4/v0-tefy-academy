@@ -5,6 +5,12 @@ export async function POST(req: Request) {
   try {
     const { amount, currency, productName, successUrl, cancelUrl } = await req.json()
 
+    // Validate amount is a valid number
+    const parsedAmount = Number.parseFloat(amount)
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return NextResponse.json({ error: "Invalid amount. Please provide a valid positive number." }, { status: 400 })
+    }
+
     // Initialize Stripe
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
       apiVersion: "2023-10-16",
@@ -20,7 +26,7 @@ export async function POST(req: Request) {
             product_data: {
               name: productName || "GRC Program",
             },
-            unit_amount: Number.parseInt(amount) * 100, // Convert to cents
+            unit_amount: Math.round(parsedAmount * 100), // Convert to cents and ensure it's an integer
           },
           quantity: 1,
         },

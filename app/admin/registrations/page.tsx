@@ -1,15 +1,16 @@
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic"
+
 import { Suspense } from "react"
 import { CreditCard, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { createServerSupabaseClient } from "@/lib/supabase/server"
+import AdminHeader from "../components/AdminHeader"
 import Table from "../dashboard/components/Table"
-import { createClient } from "@supabase/supabase-js"
 
 async function getRegistrations() {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
-    )
+    const supabase = createServerSupabaseClient()
 
     const { data, error } = await supabase.from("registrations").select("*").order("created_at", { ascending: false })
 
@@ -27,48 +28,57 @@ export default async function RegistrationsPage() {
 
   // Prepare columns for registrations table
   const columns = [
-    { key: "name", label: "Name", sortable: true },
-    { key: "email", label: "Email", sortable: true },
-    { key: "program", label: "Program", sortable: true },
+    { key: "name", header: "Name", sortable: true },
+    { key: "email", header: "Email", sortable: true },
+    { key: "program", header: "Program", sortable: true },
     {
       key: "has_internship",
-      label: "Internship",
-      render: (value: boolean) => (value ? "Yes" : "No"),
+      header: "Internship",
+      cell: (row: any) => (row.has_internship ? "Yes" : "No"),
     },
     {
       key: "payment_amount",
-      label: "Amount",
+      header: "Amount",
       sortable: true,
-      render: (value: number) => `$${value.toFixed(2)}`,
+      cell: (row: any) => {
+        const amount = row.payment_amount
+        return amount !== undefined && amount !== null ? `$${Number.parseFloat(amount).toFixed(2)}` : "$0.00"
+      },
     },
     {
       key: "payment_status",
-      label: "Status",
+      header: "Status",
       sortable: true,
-      render: (value: string) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            value === "completed"
-              ? "bg-green-100 text-green-800"
-              : value === "pending"
-                ? "bg-yellow-100 text-yellow-800"
-                : "bg-red-100 text-red-800"
-          }`}
-        >
-          {value.charAt(0).toUpperCase() + value.slice(1)}
-        </span>
-      ),
+      cell: (row: any) => {
+        const status = row.payment_status || "pending"
+        return (
+          <span
+            className={`px-2 py-1 rounded-full text-xs ${
+              status === "completed"
+                ? "bg-green-100 text-green-800"
+                : status === "pending"
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-red-100 text-red-800"
+            }`}
+          >
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </span>
+        )
+      },
     },
     {
       key: "payment_date",
-      label: "Payment Date",
+      header: "Payment Date",
       sortable: true,
-      render: (value: string) => new Date(value).toLocaleDateString(),
+      cell: (row: any) => {
+        const date = row.payment_date
+        return date ? new Date(date).toLocaleDateString() : "N/A"
+      },
     },
     {
       key: "actions",
-      label: "Actions",
-      render: (_, row: any) => (
+      header: "Actions",
+      cell: () => (
         <Button variant="ghost" size="sm">
           View Details
         </Button>
@@ -78,19 +88,24 @@ export default async function RegistrationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Program Registrations</h1>
-        <Button variant="outline" size="sm">
-          <Download className="mr-2 h-4 w-4" />
-          Export All
-        </Button>
-      </div>
+      <AdminHeader
+        title="Program Registrations"
+        description="Manage program enrollments and payments"
+        action={
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />
+            Export All
+          </Button>
+        }
+      />
 
       <Suspense fallback={<div className="h-[500px] flex items-center justify-center">Loading registrations...</div>}>
         <Table
           columns={columns}
           data={registrations}
           title="Program Registrations"
+          searchable={true}
+          pagination={{ pageSize: 10 }}
           emptyState={
             <div className="text-center py-8">
               <CreditCard className="mx-auto h-12 w-12 text-gray-300" />
