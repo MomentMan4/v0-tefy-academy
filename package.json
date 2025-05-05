@@ -67,7 +67,9 @@
     "stripe": "latest",
     "@vercel/analytics": "latest",
     "@headlessui/react": "latest",
-    "resend": "latest"
+    "resend": "latest",
+    "fs": "latest",
+    "path": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

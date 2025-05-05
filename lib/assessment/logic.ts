@@ -10,6 +10,7 @@ export interface ScoringResult {
   skillBreakdown: { category: string; score: number; description: string }[]
   recommendedCertifications: string[]
   careerPathSuggestion: string
+  methodologyDescription: string
 }
 
 const skillDimensions = {
@@ -124,6 +125,55 @@ function getCareerPathSuggestion(finalScore: number, isBridge: boolean, matchedR
   return "Consider building experience in entry-level compliance or administrative roles while developing your GRC knowledge through training and certifications."
 }
 
+function calculateRoleMatchScore(
+  radarScores: { skill: string; value: number }[],
+  role: any,
+  finalScore: number,
+): number {
+  // Create a map of the user's skill scores for easy lookup
+  const userSkillMap = radarScores.reduce(
+    (map, skill) => {
+      map[skill.skill] = skill.value
+      return map
+    },
+    {} as Record<string, number>,
+  )
+
+  // Calculate weighted score based on role's skill weights
+  let weightedScore = 0
+  let totalWeight = 0
+
+  // If role has skillWeights, use them for precise matching
+  if (role.skillWeights) {
+    for (const [skill, weight] of Object.entries(role.skillWeights)) {
+      const userSkillScore = userSkillMap[skill] || 0
+      weightedScore += userSkillScore * (weight as number)
+      totalWeight += weight as number
+    }
+
+    // Normalize to ensure weights sum to 1
+    if (totalWeight > 0) {
+      weightedScore = weightedScore / totalWeight
+    }
+  } else {
+    // Fallback to simple average if no weights defined
+    weightedScore = radarScores.reduce((sum, skill) => sum + skill.value, 0) / radarScores.length
+  }
+
+  // Calculate base match percentage based on how the user's score compares to the role threshold
+  const thresholdFactor = finalScore / (role.scoreThreshold || 70)
+
+  // Combine weighted skill score (70% weight) with threshold factor (30% weight)
+  const matchScore = weightedScore * 0.7 + thresholdFactor * 100 * 0.3
+
+  // Ensure match percentage is between 60% and 100%
+  return Math.max(60, Math.min(100, Math.round(matchScore)))
+}
+
+function generateMethodologyDescription(): string {
+  return "Our role matching algorithm analyzes your assessment responses across five key skill dimensions: Technical Knowledge, Process Management, People Skills, Compliance Aptitude, and Risk Assessment. Each role has specific skill weightings that reflect its requirements. Your match percentage represents how well your skill profile aligns with each role's unique demands."
+}
+
 export function calculateAssessmentResult(answers: number[]): ScoringResult {
   const actualScore = answers.reduce((sum, score, idx) => {
     const questionWeight = questions[idx]?.weight || 1
@@ -139,24 +189,36 @@ export function calculateAssessmentResult(answers: number[]): ScoringResult {
   // Generate skill breakdown with descriptions
   const skillBreakdown = generateSkillBreakdown(radarScores)
 
+  // Generate methodology description
+  const methodologyDescription = generateMethodologyDescription()
+
   let matchedRoles = []
   let isBridge = false
 
   if (finalScore < 70) {
-    matchedRoles = BRIDGE_ROLES.map((role) => ({
-      ...role,
-      matchPercent: Math.min(100, Math.round((finalScore / 70) * 100)),
-    }))
+    // For bridge roles, calculate match percentages
+    matchedRoles = BRIDGE_ROLES.map((role) => {
+      // Calculate a match percentage based on how the user's score compares to a bridge threshold (60%)
+      const bridgeThreshold = 60
+      const matchPercent = Math.min(100, Math.round((finalScore / bridgeThreshold) * 100))
+
+      return {
+        ...role,
+        matchPercent,
+      }
+    }).sort((a, b) => b.matchPercent - a.matchPercent)
+
     isBridge = true
   } else {
-    // Get matches based on scoreThreshold proximity
-    matchedRoles = GRC_ROLES.filter((role) => role.scoreThreshold <= finalScore)
-      .map((role) => ({
+    // For regular GRC roles, calculate match scores based on skill alignment
+    matchedRoles = GRC_ROLES.map((role) => {
+      const matchPercent = calculateRoleMatchScore(radarScores, role, finalScore)
+
+      return {
         ...role,
-        matchPercent: Math.round((finalScore / role.scoreThreshold) * 100),
-      }))
-      .sort((a, b) => b.matchPercent - a.matchPercent)
-      .slice(0, 3)
+        matchPercent,
+      }
+    }).sort((a, b) => b.matchPercent - a.matchPercent)
   }
 
   // Get recommended certifications based on score and skills
@@ -173,5 +235,6 @@ export function calculateAssessmentResult(answers: number[]): ScoringResult {
     skillBreakdown,
     recommendedCertifications,
     careerPathSuggestion,
+    methodologyDescription,
   }
 }

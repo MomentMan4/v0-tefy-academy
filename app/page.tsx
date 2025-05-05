@@ -8,7 +8,7 @@ export default function LandingPage() {
   return (
     <main className="flex flex-col items-center justify-center space-y-20">
       {/* Hero Section */}
-      <section className="w-full bg-gradient-to-br from-indigo-50 via-white to-blue-50 py-16">
+      <section className="w-full bg-gradient-to-br from-indigo-50 via-white to-blue-50 py-16 animate-fade-in">
         <div className="max-w-6xl mx-auto px-8 flex flex-col md:flex-row items-center gap-8">
           <div className="flex-1 space-y-6">
             <div className="inline-block bg-indigo-100 text-indigo-800 px-4 py-1 rounded-full text-sm font-medium mb-2">
@@ -61,7 +61,7 @@ export default function LandingPage() {
         <CountdownTimer targetDate="2025-05-28T00:00:00" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-10">
-          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow hover-lift">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
               <Calendar size={24} />
             </div>
@@ -73,7 +73,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow hover-lift">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
               <Award size={24} />
             </div>
@@ -85,7 +85,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow hover-lift">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
               <Shield size={24} />
             </div>
@@ -97,7 +97,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+          <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow hover-lift">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
               <Users size={24} />
             </div>

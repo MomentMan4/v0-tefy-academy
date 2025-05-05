@@ -7,16 +7,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Share2, Award, ChevronRight, Briefcase, FileText } from "lucide-react"
+import { ArrowLeft, Share2, Award, ChevronRight, Briefcase, HelpCircle } from "lucide-react"
 import ResultChart from "@/components/ResultChart"
-import PDFDownloadButton from "@/components/PDFDownloadButton"
 import SendEmailButton from "@/components/SendEmailButton"
 import Rating from "@/components/Rating"
-import SkillsRadarChart from "@/components/SkillsRadarChart"
 import Link from "next/link"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
+// Create a Supabase client with the service role key for server-side operations
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
+// Define the schema version we expect
+const SCHEMA_VERSION = 2 // Increment this when schema changes
+
+// Define the expected columns for the submissions table
+const EXPECTED_COLUMNS = {
+  basic: ["name", "email", "industry", "score", "roles", "is_bridge"],
+  extended: ["radar_scores", "skill_breakdown", "recommended_certifications", "career_path_suggestion"],
+}
+
+// Function to safely log assessment data to Supabase
 async function logAssessmentToSupabase({
   name,
   email,
@@ -38,27 +48,147 @@ async function logAssessmentToSupabase({
   radarScores: { skill: string; value: number }[]
   skillBreakdown: { category: string; score: number; description: string }[]
   recommendedCertifications: string[]
-  careerPathSuggestion: string
+  careerPathSuggestion?: string
 }) {
   try {
-    const { error } = await supabase.from("submissions").insert({
+    console.log("Logging assessment to Supabase...")
+
+    // Create base submission object with required fields
+    const baseSubmission = {
       name,
       email,
       industry,
       score,
       roles,
       is_bridge: isBridge,
-      radar_scores: radarScores,
-      skill_breakdown: skillBreakdown,
-      recommended_certifications: recommendedCertifications,
-      career_path_suggestion: careerPathSuggestion,
-    })
+    }
 
-    if (error) {
-      console.error("Supabase logging failed:", error.message)
+    // Try to insert with all fields first
+    try {
+      const fullSubmission = {
+        ...baseSubmission,
+        radar_scores: radarScores,
+        skill_breakdown: skillBreakdown,
+        recommended_certifications: recommendedCertifications,
+        career_path_suggestion: careerPathSuggestion,
+      }
+
+      const { error } = await supabase.from("submissions").insert(fullSubmission)
+
+      // If successful, we're done
+      if (!error) {
+        console.log("Successfully logged assessment with all fields")
+        return
+      }
+
+      // If there's an error, log it and try the fallback approach
+      console.warn("Full submission failed, trying fallback approach:", error.message)
+    } catch (error) {
+      console.warn("Error during full submission, trying fallback approach:", error)
+    }
+
+    // Fallback: Try to insert just the base data
+    try {
+      const { error: baseError } = await supabase.from("submissions").insert(baseSubmission)
+
+      if (baseError) {
+        console.error("Base Supabase logging failed:", baseError.message)
+
+        // If even the basic insert fails, try to diagnose the issue
+        if (baseError.message.includes("duplicate key")) {
+          console.log("This appears to be a duplicate submission. Attempting update instead.")
+
+          // Try to update an existing record instead
+          const { error: updateError } = await supabase
+            .from("submissions")
+            .update(baseSubmission)
+            .eq("email", email)
+            .is("score", null) // Only update if score is null (incomplete record)
+
+          if (updateError) {
+            console.error("Update of existing record also failed:", updateError.message)
+          } else {
+            console.log("Successfully updated existing record with base data")
+          }
+        }
+
+        return // Stop if we can't even insert the basic data
+      }
+
+      console.log("Successfully inserted base submission data")
+    } catch (baseInsertError) {
+      console.error("Critical error during base data insertion:", baseInsertError)
+      return
+    }
+
+    // If we get here, the base data was inserted successfully
+    // Now try to add the extended fields one by one using upsert
+    // This is safer than update because it will work even if the record was just created
+
+    try {
+      // Prepare extended data object
+      const extendedData: Record<string, any> = {
+        email, // Include email for matching
+      }
+
+      // Add each extended field if it exists
+      if (radarScores) extendedData.radar_scores = radarScores
+      if (skillBreakdown) extendedData.skill_breakdown = skillBreakdown
+      if (recommendedCertifications) extendedData.recommended_certifications = recommendedCertifications
+      if (careerPathSuggestion) extendedData.career_path_suggestion = careerPathSuggestion
+
+      // Use upsert to add extended fields
+      const { error: extendedError } = await supabase.from("submissions").upsert(extendedData, {
+        onConflict: "email",
+        ignoreDuplicates: false, // Update the record if it exists
+      })
+
+      if (extendedError) {
+        console.warn("Extended fields upsert failed:", extendedError.message)
+
+        // If upsert fails, try individual updates for each field
+        await tryIndividualFieldUpdates(email, {
+          radar_scores: radarScores,
+          skill_breakdown: skillBreakdown,
+          recommended_certifications: recommendedCertifications,
+          career_path_suggestion: careerPathSuggestion,
+        })
+      } else {
+        console.log("Successfully added extended fields")
+      }
+    } catch (extendedError) {
+      console.warn("Error during extended fields update:", extendedError)
+
+      // Try individual updates as a last resort
+      await tryIndividualFieldUpdates(email, {
+        radar_scores: radarScores,
+        skill_breakdown: skillBreakdown,
+        recommended_certifications: recommendedCertifications,
+        career_path_suggestion: careerPathSuggestion,
+      })
     }
   } catch (error) {
-    console.error("Error logging assessment:", error)
+    console.error("Unexpected error logging assessment:", error)
+  }
+}
+
+// Helper function to try updating fields individually
+async function tryIndividualFieldUpdates(email: string, fields: Record<string, any>) {
+  for (const [field, value] of Object.entries(fields)) {
+    if (value === undefined || value === null) continue
+
+    try {
+      const updateData: Record<string, any> = { [field]: value }
+      const { error } = await supabase.from("submissions").update(updateData).eq("email", email)
+
+      if (error) {
+        console.warn(`Failed to update ${field}:`, error.message)
+      } else {
+        console.log(`Successfully updated ${field}`)
+      }
+    } catch (error) {
+      console.warn(`Error updating ${field}:`, error)
+    }
   }
 }
 
@@ -69,6 +199,8 @@ export default function ResultsClient() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("overview")
+  const [dbWarning, setDbWarning] = useState<string | null>(null)
+  const [isTooltipOpen, setIsTooltipOpen] = useState(false)
 
   useEffect(() => {
     const loadResults = async () => {
@@ -107,18 +239,25 @@ export default function ResultsClient() {
         // Log to Supabase
         if (parsedUserInfo && assessmentResult) {
           const roleNames = assessmentResult.matchedRoles.map((role) => role.title)
-          await logAssessmentToSupabase({
-            name: parsedUserInfo.name,
-            email: parsedUserInfo.email,
-            industry: parsedUserInfo.industry,
-            score: assessmentResult.finalScore,
-            roles: roleNames,
-            isBridge: assessmentResult.isBridge,
-            radarScores: assessmentResult.radarScores,
-            skillBreakdown: assessmentResult.skillBreakdown,
-            recommendedCertifications: assessmentResult.recommendedCertifications,
-            careerPathSuggestion: assessmentResult.careerPathSuggestion,
-          })
+
+          try {
+            await logAssessmentToSupabase({
+              name: parsedUserInfo.name,
+              email: parsedUserInfo.email,
+              industry: parsedUserInfo.industry,
+              score: assessmentResult.finalScore,
+              roles: roleNames,
+              isBridge: assessmentResult.isBridge,
+              radarScores: assessmentResult.radarScores,
+              skillBreakdown: assessmentResult.skillBreakdown,
+              recommendedCertifications: assessmentResult.recommendedCertifications,
+              careerPathSuggestion: assessmentResult.careerPathSuggestion,
+            })
+          } catch (dbError) {
+            console.error("Database logging error:", dbError)
+            setDbWarning("Your results were saved with limited information due to a database issue.")
+            // Continue with the assessment results display even if logging fails
+          }
         }
       } catch (err) {
         console.error("Error loading assessment results:", err)
@@ -171,8 +310,9 @@ export default function ResultsClient() {
     skillBreakdown,
     recommendedCertifications,
     careerPathSuggestion,
+    methodologyDescription,
   } = result
-  const topRoleNames = matchedRoles.map((role) => role.title)
+  const topRoleNames = matchedRoles.slice(0, 3).map((role) => role.title)
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 space-y-8" id="assessment-result-pdf">
@@ -219,6 +359,13 @@ export default function ResultsClient() {
         </Button>
       </div>
 
+      {/* Database warning message if there was an issue */}
+      {dbWarning && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">
+          <p>{dbWarning}</p>
+        </div>
+      )}
+
       {/* User info for PDF (hidden in UI) */}
       <div className="hidden" data-user-info>
         <h2>Assessment Results for {userInfo.name}</h2>
@@ -234,7 +381,29 @@ export default function ResultsClient() {
       </div>
 
       {/* Score card that appears at the top */}
-      <Card className="border-2 border-primary/20 bg-primary/5">
+      <Card className="border-2 border-primary/20 bg-primary/5 relative">
+        {/* Tooltip positioned in the top-right corner */}
+        <div className="absolute top-4 right-4">
+          <TooltipProvider>
+            <Tooltip open={isTooltipOpen} onOpenChange={setIsTooltipOpen}>
+              <TooltipTrigger asChild>
+                <button
+                  className="text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-full"
+                  type="button"
+                  aria-label="Show methodology information"
+                  onClick={() => setIsTooltipOpen(!isTooltipOpen)}
+                >
+                  <HelpCircle size={16} />
+                  <span className="sr-only">Methodology information</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs p-3 text-sm bg-white border shadow-lg rounded-md" sideOffset={5}>
+                {methodologyDescription}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
         <CardContent className="pt-6">
           <div className="text-center" data-user-score>
             <div className="inline-flex items-center justify-center p-4 bg-primary/10 rounded-full mb-4">
@@ -263,7 +432,7 @@ export default function ResultsClient() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <Card>
+          <Card className="animate-fade-in">
             <CardHeader>
               <CardTitle>Your GRC Readiness Assessment</CardTitle>
               <CardDescription>This chart shows your overall alignment with key GRC competency areas</CardDescription>
@@ -323,31 +492,7 @@ export default function ResultsClient() {
             </Card>
           )}
 
-          {/* Recommended Certifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award size={20} />
-                Recommended Certifications
-              </CardTitle>
-              <CardDescription>
-                Based on your skills profile, these certifications may benefit your career
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {recommendedCertifications.map((cert, index) => (
-                  <li key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded-md">
-                    <FileText size={18} className="text-primary mt-0.5 flex-shrink-0" />
-                    <span>{cert}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
           <div className="flex flex-col md:flex-row justify-center gap-4 mt-8">
-            <PDFDownloadButton />
             <SendEmailButton
               email={userInfo.email}
               name={userInfo.name}
@@ -365,11 +510,9 @@ export default function ResultsClient() {
           <Card>
             <CardHeader>
               <CardTitle>Your GRC Strength Profile</CardTitle>
-              <CardDescription>This radar chart shows your strengths across key GRC skill dimensions</CardDescription>
+              <CardDescription>This breakdown shows your strengths across key GRC skill dimensions</CardDescription>
             </CardHeader>
             <CardContent>
-              <SkillsRadarChart data={radarScores} />
-
               <div className="mt-8 space-y-6">
                 <h3 className="text-lg font-medium">Skill Breakdown</h3>
                 {skillBreakdown.map((skill) => (
@@ -403,40 +546,46 @@ export default function ResultsClient() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {matchedRoles.map((role, index) => (
-                  <div key={index} className="border rounded-lg p-4 hover:border-primary/50 transition-colors">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                {/* Display only the top 3 roles based on match percentage */}
+                {matchedRoles.slice(0, 3).map((role, index) => (
+                  <div
+                    key={index}
+                    className="border rounded-lg p-6 hover:border-primary/50 transition-colors hover-lift"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                         {index + 1}
                       </div>
-                      <h3 className="text-lg font-medium">{role.title}</h3>
-                      {!isBridge && (
-                        <span className="ml-auto text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
-                          {role.matchPercent}% Match
-                        </span>
-                      )}
+                      <div>
+                        <h3 className="text-xl font-medium">{role.title}</h3>
+                        {!isBridge && (
+                          <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
+                            {role.matchPercent}% Match
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-muted-foreground mb-4">{role.description}</p>
+                    <p className="text-muted-foreground mb-6">{role.description}</p>
                     {!isBridge && (
-                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div className="bg-gray-50 p-3 rounded-md">
-                          <p className="font-medium text-primary mb-2">Skills Needed:</p>
+                      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                        <div className="bg-gray-50 p-4 rounded-md">
+                          <p className="font-medium text-primary mb-3">Skills Needed:</p>
                           <ul className="list-disc ml-5 space-y-1">
                             {role.skillsNeeded.map((skill: string, i: number) => (
                               <li key={i}>{skill}</li>
                             ))}
                           </ul>
                         </div>
-                        <div className="bg-gray-50 p-3 rounded-md">
+                        <div className="bg-gray-50 p-4 rounded-md">
                           <p className="font-medium text-primary mb-2">Typical Salary Range:</p>
-                          <p>{role.salaryRange}</p>
-                          <p className="font-medium text-primary mt-3 mb-1">Recommended Certifications:</p>
+                          <p className="mb-4">{role.salaryRange}</p>
+                          <p className="font-medium text-primary mb-2">Recommended Certifications:</p>
                           <p>{role.recommendedCerts.join(", ")}</p>
                         </div>
                       </div>
                     )}
                     {isBridge && (
-                      <div className="mt-4 text-sm bg-gray-50 p-3 rounded-md">
+                      <div className="mt-4 text-sm bg-gray-50 p-4 rounded-md">
                         <p className="font-medium text-primary mb-2">Typical Career Path:</p>
                         <p>{role.entryPath}</p>
                         <p className="font-medium text-primary mt-3 mb-1">Skills to Develop:</p>

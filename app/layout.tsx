@@ -3,6 +3,8 @@ import type { ReactNode } from "react"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import Script from "next/script"
+import { Analytics } from "@vercel/analytics/react"
+import { Suspense } from "react"
 
 export const metadata = {
   title: "TEFY Digital Academy – Cybersecurity GRC Program",
@@ -16,11 +18,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="theme-color" content="#ffffff" />
       </head>
       <body className="min-h-screen flex flex-col overflow-x-hidden">
         <Navbar />
-        <main className="flex-grow">{children}</main>
+        <Suspense fallback={<div>Loading...</div>}>
+          <main className="flex-grow">{children}</main>
+        </Suspense>
         <Footer />
+        <Analytics />
 
         {/* Use Next.js Script component for better loading */}
         <Script
