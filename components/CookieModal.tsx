@@ -30,13 +30,18 @@ export default function CookieModal({
   }
 
   const savePrefs = () => {
-    localStorage.setItem(
-      "cookie-consent",
-      JSON.stringify({
-        ...prefs,
-        timestamp: Date.now(),
-      }),
-    )
+    const consentData = {
+      ...prefs,
+      timestamp: Date.now(),
+    }
+
+    localStorage.setItem("cookie-consent", JSON.stringify(consentData))
+
+    // Dispatch a custom event to notify components about consent change
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("cookie-consent-changed"))
+    }
+
     setOpen(false)
     setBannerVisible(false)
   }

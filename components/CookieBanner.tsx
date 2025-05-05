@@ -39,6 +39,12 @@ export default function CookieBanner() {
         : { essential: true, analytics: false, marketing: false, timestamp: Date.now() }
 
     localStorage.setItem("cookie-consent", JSON.stringify(config))
+
+    // Dispatch a custom event to notify components about consent change
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("cookie-consent-changed"))
+    }
+
     setShow(false)
   }
 

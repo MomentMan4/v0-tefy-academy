@@ -65,11 +65,13 @@
     "vue-router": "latest",
     "@supabase/supabase-js": "latest",
     "stripe": "latest",
-    "@vercel/analytics": "latest",
     "@headlessui/react": "latest",
     "resend": "latest",
     "fs": "latest",
-    "path": "latest"
+    "path": "latest",
+    "@vercel/analytics": "latest",
+    "@supabase/ssr": "latest",
+    "@supabase/auth-helpers-nextjs": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import Script from "next/script"
-import { Analytics } from "@vercel/analytics/react"
+import ConditionalAnalytics from "@/components/ConditionalAnalytics"
 import { Suspense } from "react"
 
 export const metadata = {
@@ -30,7 +30,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <main className="flex-grow">{children}</main>
         </Suspense>
         <Footer />
-        <Analytics />
+
+        {/* Conditionally render Analytics based on cookie consent */}
+        <ConditionalAnalytics />
 
         {/* Use Next.js Script component for better loading */}
         <Script
