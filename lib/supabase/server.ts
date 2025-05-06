@@ -4,7 +4,25 @@ import type { Database } from "@/types/supabase"
 
 export function createServerSupabaseClient() {
   try {
-    const cookieStore = cookies()
+    // Try to get cookies, but handle errors that might occur during build
+    let cookieStore
+    try {
+      cookieStore = cookies()
+    } catch (error) {
+      console.warn("Error accessing cookies, using fallback cookie handler:", error)
+      // Return a mock client for build time or when cookies are not available
+      return createServerClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get: () => undefined,
+            set: () => {},
+            remove: () => {},
+          },
+        },
+      )
+    }
 
     return createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,7 +30,12 @@ export function createServerSupabaseClient() {
       {
         cookies: {
           get(name: string) {
-            return cookieStore.get(name)?.value
+            try {
+              return cookieStore.get(name)?.value
+            } catch (error) {
+              console.error("Error getting cookie:", error)
+              return undefined
+            }
           },
           set(name: string, value: string, options: any) {
             try {

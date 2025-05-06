@@ -27,6 +27,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     // If no session and not in preview, redirect to login
     if (!session && !isPreviewEnvironment) {
+      console.log("No session found, redirecting to login from admin layout")
       redirect("/auth/admin-login")
     }
 
@@ -43,28 +44,36 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     // If no user (shouldn't happen with the above logic, but just in case)
     if (!user) {
+      console.log("No user found, redirecting to login from admin layout")
       redirect("/auth/admin-login")
     }
 
     // Check if user is in admin_users table (skip in preview environment)
-    if (!isPreviewEnvironment) {
-      const { data: adminUser, error: adminError } = await supabase
-        .from("admin_users")
-        .select("*")
-        .eq("email", user.email)
-        .single()
+    if (!isPreviewEnvironment && session) {
+      try {
+        const { data: adminUser, error: adminError } = await supabase
+          .from("admin_users")
+          .select("*")
+          .eq("email", user.email)
+          .single()
 
-      if (adminError) {
-        console.error("Admin check error:", adminError)
-        // Sign out the user if there was an error checking admin status
-        await supabase.auth.signOut()
-        redirect("/auth/admin-login?error=admin_check_failed")
-      }
+        if (adminError) {
+          console.error("Admin check error:", adminError)
+          // Sign out the user if there was an error checking admin status
+          await supabase.auth.signOut()
+          redirect("/auth/admin-login?error=admin_check_failed")
+        }
 
-      if (!adminUser) {
-        // Sign out the user if they're not an admin
-        await supabase.auth.signOut()
-        redirect("/auth/admin-login?error=not_admin")
+        if (!adminUser) {
+          console.log("User not found in admin_users table, signing out and redirecting")
+          // Sign out the user if they're not an admin
+          await supabase.auth.signOut()
+          redirect("/auth/admin-login?error=not_admin")
+        }
+      } catch (adminCheckError) {
+        console.error("Error checking admin status:", adminCheckError)
+        // In case of error, redirect to login
+        redirect("/auth/admin-login?error=admin_check_error")
       }
     }
 

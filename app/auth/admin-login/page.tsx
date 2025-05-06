@@ -35,9 +35,6 @@ export default function AdminLoginPage() {
   const redirectedFrom = searchParams.get("redirectedFrom") || "/admin/dashboard"
   const supabase = createClientSupabaseClient()
 
-  //  || "/admin/dashboard"
-  // const supabase = createClientSupabaseClient() // Removed duplicate declaration
-
   // Check if user is already logged in and is an admin
   useEffect(() => {
     async function checkSession() {
@@ -126,7 +123,6 @@ export default function AdminLoginPage() {
         setDebugInfo(`Admin verified, redirecting to: ${redirectedFrom}`)
 
         // Force a hard navigation instead of client-side routing
-        // This fixes the issue where the user is not redirected after login
         window.location.href = redirectedFrom
         return
       }

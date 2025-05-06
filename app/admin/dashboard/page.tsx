@@ -230,143 +230,164 @@ async function getPaymentStatusData() {
 }
 
 export default async function AdminDashboardPage() {
-  // Fetch data on the server
-  const dashboardData = await getDashboardStats()
-  const monthlyData = await getMonthlyData()
-  const paymentStatusData = await getPaymentStatusData()
+  try {
+    // Fetch data on the server
+    const dashboardData = await getDashboardStats()
+    const monthlyData = await getMonthlyData()
+    const paymentStatusData = await getPaymentStatusData()
 
-  // Prepare stats for StatsCards component
-  const statsData = [
-    {
-      title: "Total Submissions",
-      value: dashboardData.stats.submissions,
-      description: "Users who finished the assessment",
-      change: { value: 12, trend: "up" as const },
-      link: "/admin/submissions",
-    },
-    {
-      title: "Applications",
-      value: dashboardData.stats.applications,
-      description: "Pre-assessment captured leads",
-      change: { value: 8, trend: "up" as const },
-      link: "/admin/leads",
-    },
-    {
-      title: "Registrations",
-      value: dashboardData.stats.registrations,
-      description: "Paid program enrollments",
-      change: { value: 5, trend: "up" as const },
-      link: "/admin/registrations",
-    },
-    {
-      title: "Successful Payments",
-      value: dashboardData.stats.successfulPayments,
-      description: "Completed transactions",
-      change: { value: 7, trend: "up" as const },
-      link: "/admin/payments",
-    },
-    {
-      title: "Average Rating",
-      value: dashboardData.stats.averageRating,
-      description: "Out of 5 stars",
-      change: { value: 2, trend: "up" as const },
-      link: "/admin/ratings",
-    },
-  ]
-
-  // Prepare data for pie chart
-  const conversionData = [
-    { name: "Leads", value: dashboardData.stats.applications },
-    { name: "Assessments", value: dashboardData.stats.submissions },
-    { name: "Registrations", value: dashboardData.stats.registrations },
-    { name: "Payments", value: dashboardData.stats.successfulPayments },
-  ]
-
-  // Prepare columns for recent submissions table
-  const submissionsColumns = [
-    { key: "email", header: "Email", sortable: true },
-    { key: "score", header: "Score", sortable: true },
-    {
-      key: "created_at",
-      header: "Date",
-      cell: (row: any) => new Date(row.created_at).toLocaleDateString(),
-      sortable: true,
-    },
-  ]
-
-  // Prepare columns for payments table
-  const paymentsColumns = [
-    { key: "name", header: "Name", sortable: true },
-    { key: "email", header: "Email", sortable: true },
-    { key: "program", header: "Program", sortable: true },
-    {
-      key: "payment_amount",
-      header: "Amount",
-      cell: (row: any) => {
-        const amount = row.payment_amount
-        return amount !== undefined && amount !== null ? `$${Number(amount).toFixed(2)}` : "$0.00"
+    // Prepare stats for StatsCards component
+    const statsData = [
+      {
+        title: "Total Submissions",
+        value: dashboardData.stats.submissions,
+        description: "Users who finished the assessment",
+        change: { value: 12, trend: "up" as const },
+        link: "/admin/submissions",
       },
-      sortable: true,
-    },
-    {
-      key: "payment_status",
-      header: "Status",
-      cell: (row: any) => {
-        const status = row.payment_status || "pending"
-        return (
-          <span
-            className={`px-2 py-1 rounded-full text-xs ${
-              status === "completed"
-                ? "bg-green-100 text-green-800"
-                : status === "pending"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : status === "failed"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-blue-100 text-blue-800"
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </span>
-        )
+      {
+        title: "Applications",
+        value: dashboardData.stats.applications,
+        description: "Pre-assessment captured leads",
+        change: { value: 8, trend: "up" as const },
+        link: "/admin/leads",
       },
-      sortable: true,
-    },
-    {
-      key: "payment_date",
-      header: "Date",
-      cell: (row: any) => {
-        const date = row.payment_date
-        return date ? new Date(date).toLocaleDateString() : "N/A"
+      {
+        title: "Registrations",
+        value: dashboardData.stats.registrations,
+        description: "Paid program enrollments",
+        change: { value: 5, trend: "up" as const },
+        link: "/admin/registrations",
       },
-      sortable: true,
-    },
-  ]
+      {
+        title: "Successful Payments",
+        value: dashboardData.stats.successfulPayments,
+        description: "Completed transactions",
+        change: { value: 7, trend: "up" as const },
+        link: "/admin/payments",
+      },
+      {
+        title: "Average Rating",
+        value: dashboardData.stats.averageRating,
+        description: "Out of 5 stars",
+        change: { value: 2, trend: "up" as const },
+        link: "/admin/ratings",
+      },
+    ]
 
-  return (
-    <div className="space-y-6">
-      <AdminHeader
-        title="Dashboard"
-        description="Overview of your TEFY Academy platform"
-        action={
-          <Button asChild>
-            <Link href="/admin/settings">Settings</Link>
-          </Button>
-        }
-      />
+    // Prepare data for pie chart
+    const conversionData = [
+      { name: "Leads", value: dashboardData.stats.applications },
+      { name: "Assessments", value: dashboardData.stats.submissions },
+      { name: "Registrations", value: dashboardData.stats.registrations },
+      { name: "Payments", value: dashboardData.stats.successfulPayments },
+    ]
 
-      <Suspense fallback={<div>Loading dashboard data...</div>}>
-        <DashboardClient
-          statsData={statsData}
-          monthlyData={monthlyData}
-          conversionData={conversionData}
-          paymentStatusData={paymentStatusData}
-          recentSubmissions={dashboardData.recentSubmissions}
-          recentPayments={dashboardData.recentPayments}
-          submissionsColumns={submissionsColumns}
-          paymentsColumns={paymentsColumns}
-          dailyPayments={dashboardData.dailyPayments}
+    // Prepare columns for recent submissions table
+    const submissionsColumns = [
+      { key: "email", header: "Email", sortable: true },
+      { key: "score", header: "Score", sortable: true },
+      {
+        key: "created_at",
+        header: "Date",
+        cell: (row: any) => new Date(row.created_at).toLocaleDateString(),
+        sortable: true,
+      },
+    ]
+
+    // Prepare columns for payments table
+    const paymentsColumns = [
+      { key: "name", header: "Name", sortable: true },
+      { key: "email", header: "Email", sortable: true },
+      { key: "program", header: "Program", sortable: true },
+      {
+        key: "payment_amount",
+        header: "Amount",
+        cell: (row: any) => {
+          const amount = row.payment_amount
+          return amount !== undefined && amount !== null ? `$${Number(amount).toFixed(2)}` : "$0.00"
+        },
+        sortable: true,
+      },
+      {
+        key: "payment_status",
+        header: "Status",
+        cell: (row: any) => {
+          const status = row.payment_status || "pending"
+          return (
+            <span
+              className={`px-2 py-1 rounded-full text-xs ${
+                status === "completed"
+                  ? "bg-green-100 text-green-800"
+                  : status === "pending"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : status === "failed"
+                      ? "bg-red-100 text-red-800"
+                      : "bg-blue-100 text-blue-800"
+              }`}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </span>
+          )
+        },
+        sortable: true,
+      },
+      {
+        key: "payment_date",
+        header: "Date",
+        cell: (row: any) => {
+          const date = row.payment_date
+          return date ? new Date(date).toLocaleDateString() : "N/A"
+        },
+        sortable: true,
+      },
+    ]
+
+    return (
+      <div className="space-y-6">
+        <AdminHeader
+          title="Dashboard"
+          description="Overview of your TEFY Academy platform"
+          action={
+            <Button asChild>
+              <Link href="/admin/settings">Settings</Link>
+            </Button>
+          }
         />
-      </Suspense>
-    </div>
-  )
+
+        <Suspense fallback={<div>Loading dashboard data...</div>}>
+          <DashboardClient
+            statsData={statsData}
+            monthlyData={monthlyData}
+            conversionData={conversionData}
+            paymentStatusData={paymentStatusData}
+            recentSubmissions={dashboardData.recentSubmissions}
+            recentPayments={dashboardData.recentPayments}
+            submissionsColumns={submissionsColumns}
+            paymentsColumns={paymentsColumns}
+            dailyPayments={dashboardData.dailyPayments}
+          />
+        </Suspense>
+      </div>
+    )
+  } catch (error) {
+    console.error("Error rendering dashboard:", error)
+    return (
+      <div className="space-y-6">
+        <AdminHeader
+          title="Dashboard"
+          description="Overview of your TEFY Academy platform"
+          action={
+            <Button asChild>
+              <Link href="/admin/settings">Settings</Link>
+            </Button>
+          }
+        />
+        <div className="p-6 bg-red-50 rounded-lg border border-red-200 text-red-800">
+          <h3 className="text-lg font-medium mb-2">Error loading dashboard</h3>
+          <p>There was a problem loading the dashboard data. Please try refreshing the page.</p>
+        </div>
+      </div>
+    )
+  }
 }

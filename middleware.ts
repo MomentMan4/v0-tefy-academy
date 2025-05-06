@@ -26,7 +26,12 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getSession()
 
     // Check if the route is an admin route
-    const isAdminRoute = request.nextUrl.pathname.startsWith("/admin") && request.nextUrl.pathname !== "/admin/login"
+    const isAdminRoute =
+      request.nextUrl.pathname.startsWith("/admin") &&
+      !request.nextUrl.pathname.startsWith("/admin/login") &&
+      !request.nextUrl.pathname.includes("/_next") &&
+      !request.nextUrl.pathname.includes("/favicon.ico")
+
     const isAdminLoginPage = request.nextUrl.pathname === "/auth/admin-login"
     const isLoginRedirectPage = request.nextUrl.pathname === "/admin/login"
 

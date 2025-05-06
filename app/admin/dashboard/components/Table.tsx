@@ -1,5 +1,7 @@
 "use client"
 
+import { useMemo } from "react"
+
 import type React from "react"
 
 import { useState, useEffect } from "react"
@@ -21,7 +23,7 @@ interface PaginationOptions {
 }
 
 interface TableProps {
-  data: any[]
+  data: any[] | Record<string, any>
   columns: Column[]
   pagination?: PaginationOptions
   searchable?: boolean
@@ -40,6 +42,75 @@ export default function Table({
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null)
+  const [filteredData, setFilteredData] = useState<any[]>([])
+  const [paginatedData, setPaginatedData] = useState<any[]>([])
+
+  // Convert data to array if it's an object or handle empty data
+  const normalizedData = useMemo(() => {
+    if (Array.isArray(data)) {
+      return data
+    }
+
+    if (data && typeof data === "object" && Object.keys(data).length > 0) {
+      // Convert object to array if possible
+      return Object.values(data)
+    }
+
+    // Default to empty array for any other case
+    return []
+  }, [data])
+
+  // Filter and sort data when dependencies change
+  useEffect(() => {
+    // Filter data based on search query
+    let result = normalizedData
+    if (searchable && searchQuery) {
+      result = normalizedData.filter((row) =>
+        columns.some((column) => {
+          const value = row[column.key]
+          return (
+            value !== undefined && value !== null && String(value).toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        }),
+      )
+    }
+
+    // Sort data if sort config exists
+    if (sortConfig) {
+      result = [...result].sort((a, b) => {
+        if (!a || !b) return 0
+
+        const aValue = a[sortConfig.key]
+        const bValue = b[sortConfig.key]
+
+        // Handle undefined or null values
+        if (aValue === undefined || aValue === null) return sortConfig.direction === "asc" ? -1 : 1
+        if (bValue === undefined || bValue === null) return sortConfig.direction === "asc" ? 1 : -1
+
+        // Compare values based on type
+        if (typeof aValue === "number" && typeof bValue === "number") {
+          return sortConfig.direction === "asc" ? aValue - bValue : bValue - aValue
+        }
+
+        // Default string comparison
+        const aString = String(aValue).toLowerCase()
+        const bString = String(bValue).toLowerCase()
+
+        return sortConfig.direction === "asc" ? aString.localeCompare(bString) : bString.localeCompare(aString)
+      })
+    }
+
+    setFilteredData(result)
+
+    // Reset to first page when filtered data changes
+    setCurrentPage(1)
+  }, [normalizedData, searchQuery, sortConfig, columns, searchable])
+
+  // Update paginated data when filtered data or current page changes
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * pagination.pageSize
+    setPaginatedData(filteredData.slice(startIndex, startIndex + pagination.pageSize))
+  }, [filteredData, currentPage, pagination.pageSize])
 
   // Reset page when search query changes
   useEffect(() => {
@@ -59,89 +130,57 @@ export default function Table({
 
   // Handle export
   const handleExport = () => {
-    // Default CSV export
-    const headers = columns.map((col) => col.header).join(",")
-    const rows = filteredData
-      .map((row) =>
-        columns
-          .map((col) => {
-            const value = row[col.key]
-            // Handle commas and quotes in CSV
-            if (typeof value === "string" && (value.includes(",") || value.includes('"'))) {
-              return `"${value.replace(/"/g, '""')}"`
-            }
-            return value !== undefined && value !== null ? value : ""
-          })
-          .join(","),
-      )
-      .join("\n")
+    try {
+      // Default CSV export
+      const headers = columns.map((col) => col.header).join(",")
+      const rows = filteredData
+        .map((row) =>
+          columns
+            .map((col) => {
+              const value = row[col.key]
+              // Handle commas and quotes in CSV
+              if (typeof value === "string" && (value.includes(",") || value.includes('"'))) {
+                return `"${value.replace(/"/g, '""')}"`
+              }
+              return value !== undefined && value !== null ? value : ""
+            })
+            .join(","),
+        )
+        .join("\n")
 
-    const csv = `${headers}\n${rows}`
+      const csv = `${headers}\n${rows}`
 
-    // Create and download file
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.setAttribute("href", url)
-    link.setAttribute("download", `data-export-${format(new Date(), "yyyy-MM-dd")}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      // Create and download file
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.setAttribute("href", url)
+      link.setAttribute("download", `data-export-${format(new Date(), "yyyy-MM-dd")}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error("Error exporting data:", error)
+      alert("Failed to export data. Please try again.")
+    }
   }
 
-  // Filter data based on search query
-  const filteredData =
-    searchable && searchQuery && Array.isArray(data)
-      ? data.filter((row) =>
-          columns.some((column) => {
-            const value = row[column.key]
-            return (
-              value !== undefined && value !== null && String(value).toLowerCase().includes(searchQuery.toLowerCase())
-            )
-          }),
-        )
-      : Array.isArray(data)
-        ? data
-        : []
-
-  // Sort data
-  const sortedData =
-    sortConfig && Array.isArray(filteredData)
-      ? [...filteredData].sort((a, b) => {
-          if (!a || !b) return 0
-
-          const aValue = a[sortConfig.key]
-          const bValue = b[sortConfig.key]
-
-          // Handle undefined or null values
-          if (aValue === undefined || aValue === null) return sortConfig.direction === "asc" ? -1 : 1
-          if (bValue === undefined || bValue === null) return sortConfig.direction === "asc" ? 1 : -1
-
-          // Compare values based on type
-          if (typeof aValue === "number" && typeof bValue === "number") {
-            return sortConfig.direction === "asc" ? aValue - bValue : bValue - aValue
-          }
-
-          // Default string comparison
-          const aString = String(aValue).toLowerCase()
-          const bString = String(bValue).toLowerCase()
-
-          return sortConfig.direction === "asc" ? aString.localeCompare(bString) : bString.localeCompare(aString)
-        })
-      : filteredData
-
-  // Paginate data
-  const pageCount = Math.ceil(sortedData.length / pagination.pageSize)
-  const paginatedData = sortedData.slice((currentPage - 1) * pagination.pageSize, currentPage * pagination.pageSize)
+  // Calculate page count
+  const pageCount = Math.ceil(filteredData.length / pagination.pageSize)
 
   // Render empty state
-  if (!Array.isArray(data) || data.length === 0) {
+  if (filteredData.length === 0) {
     return (
       <div className="rounded-md border">
         <div className="flex items-center justify-center h-64">
           {emptyState || (
             <div className="text-center">
               <p className="text-muted-foreground">No data available</p>
+              {!Array.isArray(data) && typeof data === "object" && Object.keys(data).length === 0 && (
+                <p className="text-sm text-red-500 mt-2">
+                  Warning: Data provided is an empty object instead of an array
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -218,7 +257,7 @@ export default function Table({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
             Showing {(currentPage - 1) * pagination.pageSize + 1} to{" "}
-            {Math.min(currentPage * pagination.pageSize, sortedData.length)} of {sortedData.length} entries
+            {Math.min(currentPage * pagination.pageSize, filteredData.length)} of {filteredData.length} entries
           </div>
 
           <div className="flex items-center space-x-2">
