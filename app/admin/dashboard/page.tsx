@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import AdminHeader from "../components/AdminHeader"
 import DashboardClient from "./components/DashboardClient"
-import { format, subMonths, startOfMonth, endOfMonth } from "date-fns"
+import { format, subMonths, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns"
 
 // Force dynamic rendering for this page
 export const dynamic = "force-dynamic"
@@ -47,6 +47,43 @@ async function getDashboardStats() {
       console.error("Error fetching payments:", paymentsError)
     }
 
+    // Get today's payment data
+    const today = new Date()
+    const todayStart = startOfDay(today).toISOString()
+    const todayEnd = endOfDay(today).toISOString()
+
+    const [completedToday, failedToday, pendingToday, refundedToday, totalToday] = await Promise.all([
+      supabase
+        .from("registrations")
+        .select("*", { count: "exact", head: true })
+        .eq("payment_status", "completed")
+        .gte("payment_date", todayStart)
+        .lte("payment_date", todayEnd),
+      supabase
+        .from("registrations")
+        .select("*", { count: "exact", head: true })
+        .eq("payment_status", "failed")
+        .gte("payment_date", todayStart)
+        .lte("payment_date", todayEnd),
+      supabase
+        .from("registrations")
+        .select("*", { count: "exact", head: true })
+        .eq("payment_status", "pending")
+        .gte("payment_date", todayStart)
+        .lte("payment_date", todayEnd),
+      supabase
+        .from("registrations")
+        .select("*", { count: "exact", head: true })
+        .eq("payment_status", "refunded")
+        .gte("payment_date", todayStart)
+        .lte("payment_date", todayEnd),
+      supabase
+        .from("registrations")
+        .select("*", { count: "exact", head: true })
+        .gte("payment_date", todayStart)
+        .lte("payment_date", todayEnd),
+    ])
+
     // Calculate average rating
     let averageRating = 0
     if (ratingsResult.data && ratingsResult.data.length > 0) {
@@ -64,6 +101,13 @@ async function getDashboardStats() {
       },
       recentSubmissions: submissions || [],
       recentPayments: recentPayments || [],
+      dailyPayments: {
+        completed: completedToday.count || 0,
+        failed: failedToday.count || 0,
+        pending: pendingToday.count || 0,
+        refunded: refundedToday.count || 0,
+        total: totalToday.count || 0,
+      },
     }
   } catch (error) {
     console.error("Error fetching dashboard stats:", error)
@@ -78,6 +122,13 @@ async function getDashboardStats() {
       },
       recentSubmissions: [],
       recentPayments: [],
+      dailyPayments: {
+        completed: 0,
+        failed: 0,
+        pending: 0,
+        refunded: 0,
+        total: 0,
+      },
     }
   }
 }
@@ -154,16 +205,18 @@ async function getPaymentStatusData() {
     const supabase = createServerSupabaseClient()
 
     // Get counts for different payment statuses
-    const [completedResult, pendingResult, failedResult] = await Promise.all([
+    const [completedResult, pendingResult, failedResult, refundedResult] = await Promise.all([
       supabase.from("registrations").select("*", { count: "exact", head: true }).eq("payment_status", "completed"),
       supabase.from("registrations").select("*", { count: "exact", head: true }).eq("payment_status", "pending"),
       supabase.from("registrations").select("*", { count: "exact", head: true }).eq("payment_status", "failed"),
+      supabase.from("registrations").select("*", { count: "exact", head: true }).eq("payment_status", "refunded"),
     ])
 
     return [
       { name: "Completed", value: completedResult.count || 0 },
       { name: "Pending", value: pendingResult.count || 0 },
       { name: "Failed", value: failedResult.count || 0 },
+      { name: "Refunded", value: refundedResult.count || 0 },
     ]
   } catch (error) {
     console.error("Error fetching payment status data:", error)
@@ -171,6 +224,7 @@ async function getPaymentStatusData() {
       { name: "Completed", value: 0 },
       { name: "Pending", value: 0 },
       { name: "Failed", value: 0 },
+      { name: "Refunded", value: 0 },
     ]
   }
 }
@@ -266,7 +320,9 @@ export default async function AdminDashboardPage() {
                 ? "bg-green-100 text-green-800"
                 : status === "pending"
                   ? "bg-yellow-100 text-yellow-800"
-                  : "bg-red-100 text-red-800"
+                  : status === "failed"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-blue-100 text-blue-800"
             }`}
           >
             {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -308,6 +364,7 @@ export default async function AdminDashboardPage() {
           recentPayments={dashboardData.recentPayments}
           submissionsColumns={submissionsColumns}
           paymentsColumns={paymentsColumns}
+          dailyPayments={dashboardData.dailyPayments}
         />
       </Suspense>
     </div>

@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import StatsCards from "./StatsCards"
 import ChartPreview from "./ChartPreview"
 import Table from "./Table"
+import PaymentMetricsCard from "./PaymentMetricsCard"
 
 interface DashboardClientProps {
   statsData: any[]
@@ -17,6 +18,13 @@ interface DashboardClientProps {
   recentPayments: any[]
   submissionsColumns: any[]
   paymentsColumns: any[]
+  dailyPayments: {
+    completed: number
+    failed: number
+    pending: number
+    refunded: number
+    total: number
+  }
 }
 
 export default function DashboardClient({
@@ -28,6 +36,7 @@ export default function DashboardClient({
   recentPayments,
   submissionsColumns,
   paymentsColumns,
+  dailyPayments,
 }: DashboardClientProps) {
   const [activeTab, setActiveTab] = useState("overview")
 
@@ -53,12 +62,7 @@ export default function DashboardClient({
               dataKeys={["leads", "submissions", "registrations", "payments"]}
             />
 
-            <ChartPreview
-              title="Conversion Funnel"
-              description="Leads to payments conversion"
-              data={conversionData}
-              type="pie"
-            />
+            <PaymentMetricsCard dailyPayments={dailyPayments} />
           </div>
         </TabsContent>
 
@@ -85,20 +89,12 @@ export default function DashboardClient({
                     data={paymentStatusData}
                     type="pie"
                     height={250}
-                    colors={["#10b981", "#f59e0b", "#ef4444"]}
+                    colors={["#10b981", "#f59e0b", "#ef4444", "#3b82f6"]}
                   />
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Conversion Rate</CardTitle>
-                  <CardDescription>From leads to completed payments</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartPreview title="" description="" data={conversionData} type="pie" height={250} />
-                </CardContent>
-              </Card>
+              <PaymentMetricsCard dailyPayments={dailyPayments} />
             </div>
           </div>
         </TabsContent>
@@ -133,27 +129,12 @@ export default function DashboardClient({
                   data={paymentStatusData}
                   type="pie"
                   height={250}
-                  colors={["#10b981", "#f59e0b", "#ef4444"]}
+                  colors={["#10b981", "#f59e0b", "#ef4444", "#3b82f6"]}
                 />
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Payments</CardTitle>
-                <CardDescription>Payment trends over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartPreview
-                  title=""
-                  description=""
-                  data={monthlyData}
-                  type="line"
-                  dataKeys={["payments"]}
-                  height={250}
-                />
-              </CardContent>
-            </Card>
+            <PaymentMetricsCard dailyPayments={dailyPayments} />
           </div>
 
           {recentPayments && recentPayments.length > 0 ? (
