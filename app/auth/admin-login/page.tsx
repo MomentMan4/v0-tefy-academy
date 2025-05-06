@@ -10,9 +10,9 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { createClientSupabaseClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { AlertCircle, Eye, EyeOff } from "lucide-react"
+import { AlertCircle, Eye, EyeOff, Info } from "lucide-react"
 import Image from "next/image"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
@@ -28,6 +28,7 @@ export default function AdminLoginPage() {
   const [showResetForm, setShowResetForm] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string | null>(null)
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -43,6 +44,8 @@ export default function AdminLoginPage() {
         } = await supabase.auth.getSession()
 
         if (session) {
+          setDebugInfo(`Session found for user: ${session.user.email}`)
+
           // Check if user is an admin
           const { data: adminData, error: adminError } = await supabase
             .from("admin_users")
@@ -51,16 +54,21 @@ export default function AdminLoginPage() {
             .single()
 
           if (!adminError && adminData) {
+            setDebugInfo(`Admin user verified: ${session.user.email}`)
             // User is an admin, redirect to dashboard
             router.push("/admin/dashboard")
             return
           }
 
+          setDebugInfo(`Not an admin user: ${session.user.email}`)
           // User is not an admin, sign them out
           await supabase.auth.signOut()
+        } else {
+          setDebugInfo("No session found")
         }
       } catch (error) {
         console.error("Error checking session:", error)
+        setDebugInfo(`Error checking session: ${error instanceof Error ? error.message : String(error)}`)
       } finally {
         setCheckingSession(false)
       }
@@ -73,18 +81,24 @@ export default function AdminLoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    setDebugInfo(null)
 
     try {
+      setDebugInfo(`Attempting login for: ${email}`)
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
 
       if (error) {
+        setDebugInfo(`Login error: ${error.message}`)
         throw error
       }
 
       if (data?.user) {
+        setDebugInfo(`Login successful for: ${data.user.email}`)
+
         // Check if user is an admin
         const { data: adminData, error: adminError } = await supabase
           .from("admin_users")
@@ -92,12 +106,21 @@ export default function AdminLoginPage() {
           .eq("email", data.user.email)
           .single()
 
-        if (adminError || !adminData) {
+        if (adminError) {
+          setDebugInfo(`Admin check error: ${adminError.message}`)
           // If not an admin, sign them out
           await supabase.auth.signOut()
           throw new Error("You do not have admin privileges")
         }
 
+        if (!adminData) {
+          setDebugInfo(`Not an admin user: ${data.user.email}`)
+          // If not an admin, sign them out
+          await supabase.auth.signOut()
+          throw new Error("You do not have admin privileges")
+        }
+
+        setDebugInfo(`Admin verified, redirecting to: ${redirectedFrom}`)
         // Redirect to admin dashboard or the page they were trying to access
         router.push(redirectedFrom)
         router.refresh()
@@ -230,6 +253,14 @@ export default function AdminLoginPage() {
                   <span>{error}</span>
                 </div>
               )}
+
+              {debugInfo && (
+                <Alert className="bg-blue-50 border-blue-200">
+                  <Info className="h-4 w-4 text-blue-600 mr-2" />
+                  <AlertDescription className="text-blue-800 text-xs">{debugInfo}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -275,6 +306,13 @@ export default function AdminLoginPage() {
                 </button>
               </div>
             </CardContent>
+
+            <CardFooter className="flex flex-col space-y-2 pt-0">
+              <div className="text-xs text-muted-foreground text-center">
+                <p>If you're having trouble logging in, please contact the administrator.</p>
+                <p className="mt-1">Make sure you have been granted admin access to the system.</p>
+              </div>
+            </CardFooter>
           </form>
         )}
       </Card>

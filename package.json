@@ -70,8 +70,8 @@
     "fs": "latest",
     "path": "latest",
     "@vercel/analytics": "latest",
-    "@supabase/ssr": "latest",
-    "@supabase/auth-helpers-nextjs": "latest"
+    "@supabase/auth-helpers-nextjs": "latest",
+    "@supabase/ssr": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

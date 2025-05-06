@@ -1,51 +1,44 @@
-// Force dynamic rendering for this API route
-export const dynamic = "force-dynamic"
-
+import { NextResponse } from "next/server"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
-import { type NextRequest, NextResponse } from "next/server"
 
-export async function POST(request: NextRequest) {
+// This endpoint should be secured in production
+export async function POST(req: Request) {
   try {
+    const { email, password } = await req.json()
+
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+    }
+
     const supabase = createServerSupabaseClient()
 
-    // Check if the request is authorized
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    // Create the user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    })
 
-    // Only allow this operation from an existing admin
-    const { data: adminCheck } = await supabase.from("admin_users").select("*").eq("email", session.user.email).single()
-
-    if (!adminCheck) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    }
-
-    // Get the email from the request
-    const { email, role = "admin" } = await request.json()
-
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 })
-    }
-
-    // Check if the user exists in Supabase Auth
-    const { data: user, error: userError } = await supabase.auth.admin.getUserByEmail(email)
-
-    if (userError) {
-      return NextResponse.json({ error: "User not found in authentication system" }, { status: 404 })
+    if (authError) {
+      console.error("Error creating auth user:", authError)
+      return NextResponse.json({ error: authError.message }, { status: 500 })
     }
 
     // Add the user to the admin_users table
-    const { data, error } = await supabase.from("admin_users").insert([{ email, role }]).select()
+    const { error: dbError } = await supabase.from("admin_users").insert({
+      email,
+      role: "admin",
+      created_at: new Date().toISOString(),
+    })
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (dbError) {
+      console.error("Error adding user to admin_users table:", dbError)
+      return NextResponse.json({ error: dbError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, data })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, user: authData.user })
+  } catch (error) {
+    console.error("Error creating admin user:", error)
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
   }
 }

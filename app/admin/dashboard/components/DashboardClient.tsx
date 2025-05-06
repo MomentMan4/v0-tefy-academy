@@ -1,64 +1,35 @@
 "use client"
 
 import { useState } from "react"
-import { BarChart } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { BarChart, CreditCard } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import StatsCards from "./StatsCards"
 import ChartPreview from "./ChartPreview"
 import Table from "./Table"
-import { format } from "date-fns"
-import type { DateRange } from "react-day-picker"
 
 interface DashboardClientProps {
   statsData: any[]
   monthlyData: any[]
   conversionData: any[]
+  paymentStatusData: any[]
   recentSubmissions: any[]
+  recentPayments: any[]
   submissionsColumns: any[]
+  paymentsColumns: any[]
 }
 
 export default function DashboardClient({
   statsData,
   monthlyData,
   conversionData,
+  paymentStatusData,
   recentSubmissions,
+  recentPayments,
   submissionsColumns,
+  paymentsColumns,
 }: DashboardClientProps) {
   const [activeTab, setActiveTab] = useState("overview")
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date(),
-  })
-  const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar")
-
-  // Handle export data
-  const handleExportData = () => {
-    // Create CSV content
-    const headers = submissionsColumns.map((col) => col.header).join(",")
-    const rows = recentSubmissions
-      .map((row) =>
-        submissionsColumns
-          .map((col) => {
-            const value = typeof row[col.key] === "string" ? `"${row[col.key]}"` : row[col.key]
-            return value
-          })
-          .join(","),
-      )
-      .join("\n")
-
-    const csvContent = `${headers}\n${rows}`
-
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.setAttribute("href", url)
-    link.setAttribute("download", `dashboard-data-${format(new Date(), "yyyy-MM-dd")}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 
   return (
     <div className="space-y-6">
@@ -67,6 +38,7 @@ export default function DashboardClient({
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -78,11 +50,12 @@ export default function DashboardClient({
               description="Submissions, leads, and registrations over time"
               data={monthlyData}
               type="bar"
+              dataKeys={["leads", "submissions", "registrations", "payments"]}
             />
 
             <ChartPreview
               title="Conversion Funnel"
-              description="Leads to registrations conversion"
+              description="Leads to payments conversion"
               data={conversionData}
               type="pie"
             />
@@ -96,7 +69,37 @@ export default function DashboardClient({
               description="Detailed view of platform activity"
               data={monthlyData}
               type="line"
+              dataKeys={["leads", "submissions", "registrations", "payments"]}
             />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment Status Distribution</CardTitle>
+                  <CardDescription>Overview of payment statuses</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartPreview
+                    title=""
+                    description=""
+                    data={paymentStatusData}
+                    type="pie"
+                    height={250}
+                    colors={["#10b981", "#f59e0b", "#ef4444"]}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Conversion Rate</CardTitle>
+                  <CardDescription>From leads to completed payments</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartPreview title="" description="" data={conversionData} type="pie" height={250} />
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </TabsContent>
 
@@ -110,6 +113,58 @@ export default function DashboardClient({
                 <h3 className="text-lg font-medium">No submissions yet</h3>
                 <p className="text-sm text-gray-500 mt-1">
                   Submissions will appear here once users complete the assessment.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="payments" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Status</CardTitle>
+                <CardDescription>Distribution of payment statuses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartPreview
+                  title=""
+                  description=""
+                  data={paymentStatusData}
+                  type="pie"
+                  height={250}
+                  colors={["#10b981", "#f59e0b", "#ef4444"]}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly Payments</CardTitle>
+                <CardDescription>Payment trends over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartPreview
+                  title=""
+                  description=""
+                  data={monthlyData}
+                  type="line"
+                  dataKeys={["payments"]}
+                  height={250}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {recentPayments && recentPayments.length > 0 ? (
+            <Table columns={paymentsColumns} data={recentPayments} title="Recent Payments" />
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <CreditCard className="h-12 w-12 text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium">No payments yet</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Payments will appear here once users complete transactions.
                 </p>
               </CardContent>
             </Card>
