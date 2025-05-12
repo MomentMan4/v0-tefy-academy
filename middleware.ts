@@ -2,6 +2,9 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 
+// Add detailed logging in development
+const isDevEnvironment = process.env.NODE_ENV === "development"
+
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next()
 
@@ -15,16 +18,10 @@ export async function middleware(request: NextRequest) {
   // Add Content-Security-Policy header
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://api.stripe.com; frame-src https://js.stripe.com; object-src 'none';",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.vercel-insights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://api.stripe.com https://*.vercel-insights.com; frame-src https://js.stripe.com; object-src 'none';",
   )
 
   try {
-    const supabase = createMiddlewareClient({ req: request, res: response })
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
     // Check if the route is an admin route
     const isAdminRoute =
       request.nextUrl.pathname.startsWith("/admin") &&
@@ -36,14 +33,39 @@ export async function middleware(request: NextRequest) {
     const isLoginRedirectPage = request.nextUrl.pathname === "/admin/login"
 
     // Skip middleware processing for the /admin/login page
-    // This allows the page component to handle the redirect
     if (isLoginRedirectPage) {
+      if (isDevEnvironment) {
+        console.log("Skipping middleware for login redirect page")
+      }
       return response
     }
 
-    // Modify the middleware to better handle admin authentication
+    // Create Supabase client
+    const supabase = createMiddlewareClient({ req: request, res: response })
+
+    // Get session with error handling
+    let session = null
+    try {
+      const { data } = await supabase.auth.getSession()
+      session = data.session
+
+      if (isDevEnvironment) {
+        console.log("Session in middleware:", session ? "Found" : "Not found")
+        if (session) {
+          console.log("User email:", session.user.email)
+        }
+      }
+    } catch (sessionError) {
+      console.error("Error getting session in middleware:", sessionError)
+      // Continue without session
+    }
+
+    // If accessing admin routes without a session, redirect to login
     if (isAdminRoute && !session) {
-      console.log("No session found, redirecting to login")
+      if (isDevEnvironment) {
+        console.log("No session found, redirecting to login from middleware")
+      }
+
       const redirectUrl = new URL("/auth/admin-login", request.url)
       redirectUrl.searchParams.set("redirectedFrom", request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
@@ -53,12 +75,15 @@ export async function middleware(request: NextRequest) {
     if (isAdminLoginPage && session) {
       try {
         // Check if user is an admin
-        const supabase = createMiddlewareClient({ req: request, res: response })
         const { data: adminData, error: adminError } = await supabase
           .from("admin_users")
           .select("*")
           .eq("email", session.user.email)
           .single()
+
+        if (isDevEnvironment) {
+          console.log("Admin check in middleware:", adminError ? "Error" : adminData ? "Is admin" : "Not admin")
+        }
 
         if (!adminError && adminData) {
           // User is an admin, redirect to dashboard
@@ -67,7 +92,7 @@ export async function middleware(request: NextRequest) {
 
         // If not an admin, let the page component handle it
       } catch (error) {
-        console.error("Error checking admin status:", error)
+        console.error("Error checking admin status in middleware:", error)
       }
     }
 

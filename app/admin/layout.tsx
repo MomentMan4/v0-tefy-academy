@@ -6,6 +6,9 @@ import AdminLayoutClient from "./components/AdminLayoutClient"
 // Force dynamic rendering for all admin pages
 export const dynamic = "force-dynamic"
 
+// Add detailed logging in development
+const isDevEnvironment = process.env.NODE_ENV === "development"
+
 // Check if we're in a preview environment
 const isPreviewEnvironment = process.env.VERCEL_ENV === "preview" || process.env.NODE_ENV === "development"
 
@@ -15,19 +18,35 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     const supabase = createServerSupabaseClient()
 
     // Get session
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
+    let session = null
+    let sessionError = null
 
-    if (sessionError) {
+    try {
+      const sessionResult = await supabase.auth.getSession()
+      session = sessionResult.data.session
+      sessionError = sessionResult.error
+
+      if (isDevEnvironment) {
+        console.log("Session in admin layout:", session ? "Found" : "Not found")
+        if (sessionError) {
+          console.error("Session error in admin layout:", sessionError)
+        }
+      }
+    } catch (error) {
+      console.error("Error getting session in admin layout:", error)
+      sessionError = error
+    }
+
+    if (sessionError && !isPreviewEnvironment) {
       console.error("Session error:", sessionError)
       redirect("/auth/admin-login?error=session_error")
     }
 
     // If no session and not in preview, redirect to login
     if (!session && !isPreviewEnvironment) {
-      console.log("No session found, redirecting to login from admin layout")
+      if (isDevEnvironment) {
+        console.log("No session found, redirecting to login from admin layout")
+      }
       redirect("/auth/admin-login")
     }
 
@@ -44,7 +63,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     // If no user (shouldn't happen with the above logic, but just in case)
     if (!user) {
-      console.log("No user found, redirecting to login from admin layout")
+      if (isDevEnvironment) {
+        console.log("No user found, redirecting to login from admin layout")
+      }
       redirect("/auth/admin-login")
     }
 
@@ -65,7 +86,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         }
 
         if (!adminUser) {
-          console.log("User not found in admin_users table, signing out and redirecting")
+          if (isDevEnvironment) {
+            console.log("User not found in admin_users table, signing out and redirecting")
+          }
           // Sign out the user if they're not an admin
           await supabase.auth.signOut()
           redirect("/auth/admin-login?error=not_admin")

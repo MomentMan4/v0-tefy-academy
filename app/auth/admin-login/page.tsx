@@ -12,9 +12,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { AlertCircle, Eye, EyeOff, Info } from "lucide-react"
+import { AlertCircle, Eye, EyeOff, RefreshCw } from "lucide-react"
 import Image from "next/image"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+
+// Add detailed logging in development
+const isDevEnvironment = process.env.NODE_ENV === "development"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
@@ -28,23 +31,66 @@ export default function AdminLoginPage() {
   const [showResetForm, setShowResetForm] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
-  const [debugInfo, setDebugInfo] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string[]>([])
+  const [showDebug, setShowDebug] = useState(isDevEnvironment)
+  const [sessionCheckAttempts, setSessionCheckAttempts] = useState(0)
 
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectedFrom = searchParams.get("redirectedFrom") || "/admin/dashboard"
+  const errorParam = searchParams.get("error")
+
+  // Initialize Supabase client
   const supabase = createClientSupabaseClient()
+
+  // Add debug info helper function
+  const addDebugInfo = (info: string) => {
+    if (isDevEnvironment || showDebug) {
+      console.log(info)
+      setDebugInfo((prev) => [...prev, `${new Date().toISOString().split("T")[1].split(".")[0]}: ${info}`])
+    }
+  }
+
+  // Handle URL error parameters
+  useEffect(() => {
+    if (errorParam) {
+      switch (errorParam) {
+        case "session_error":
+          setError("Session error occurred. Please try logging in again.")
+          break
+        case "admin_check_failed":
+          setError("Failed to verify admin status. Please contact support.")
+          break
+        case "not_admin":
+          setError("You do not have admin privileges.")
+          break
+        case "server_error":
+          setError("A server error occurred. Please try again later.")
+          break
+        default:
+          setError(`Error: ${errorParam}`)
+      }
+    }
+  }, [errorParam])
 
   // Check if user is already logged in and is an admin
   useEffect(() => {
     async function checkSession() {
       try {
+        addDebugInfo(`Checking session (attempt ${sessionCheckAttempts + 1})...`)
+
         const {
           data: { session },
+          error: sessionError,
         } = await supabase.auth.getSession()
 
+        if (sessionError) {
+          addDebugInfo(`Session error: ${sessionError.message}`)
+          throw sessionError
+        }
+
         if (session) {
-          setDebugInfo(`Session found for user: ${session.user.email}`)
+          addDebugInfo(`Session found for user: ${session.user.email}`)
 
           // Check if user is an admin
           const { data: adminData, error: adminError } = await supabase
@@ -53,38 +99,55 @@ export default function AdminLoginPage() {
             .eq("email", session.user.email)
             .single()
 
-          if (!adminError && adminData) {
-            setDebugInfo(`Admin user verified: ${session.user.email}`)
-            // User is an admin, redirect to dashboard
-            router.push("/admin/dashboard")
-            return
-          }
+          if (adminError) {
+            addDebugInfo(`Admin check error: ${adminError.message}`)
 
-          setDebugInfo(`Not an admin user: ${session.user.email}`)
-          // User is not an admin, sign them out
-          await supabase.auth.signOut()
+            if (adminError.code === "PGRST116") {
+              addDebugInfo("User not found in admin_users table")
+              // Sign out the user if they're not an admin
+              await supabase.auth.signOut()
+              setError("You do not have admin privileges.")
+            } else {
+              // Other database error
+              setError(`Database error: ${adminError.message}`)
+            }
+          } else if (adminData) {
+            addDebugInfo(`Admin user verified: ${session.user.email}`)
+            // User is an admin, redirect to dashboard
+            window.location.href = redirectedFrom
+            return
+          } else {
+            addDebugInfo(`Not an admin user: ${session.user.email}`)
+            // User is not an admin, sign them out
+            await supabase.auth.signOut()
+            setError("You do not have admin privileges.")
+          }
         } else {
-          setDebugInfo("No session found")
+          addDebugInfo("No session found")
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error checking session:", error)
-        setDebugInfo(`Error checking session: ${error instanceof Error ? error.message : String(error)}`)
+        addDebugInfo(`Error checking session: ${error.message || String(error)}`)
+        setError("Error checking session. Please try again.")
       } finally {
         setCheckingSession(false)
       }
     }
 
-    checkSession()
-  }, [router, supabase])
+    if (checkingSession) {
+      checkSession()
+      setSessionCheckAttempts((prev) => prev + 1)
+    }
+  }, [supabase, redirectedFrom, checkingSession, sessionCheckAttempts])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    setDebugInfo(null)
+    setDebugInfo([])
 
     try {
-      setDebugInfo(`Attempting login for: ${email}`)
+      addDebugInfo(`Attempting login for: ${email}`)
 
       // First, check if the user exists in the admin_users table
       const { data: adminCheck, error: adminCheckError } = await supabase
@@ -93,12 +156,22 @@ export default function AdminLoginPage() {
         .eq("email", email.trim())
         .single()
 
-      if (adminCheckError || !adminCheck) {
-        setDebugInfo(`Admin check failed: ${adminCheckError?.message || "User not found in admin_users table"}`)
+      if (adminCheckError) {
+        addDebugInfo(`Admin check error: ${adminCheckError.message}`)
+
+        if (adminCheckError.code === "PGRST116") {
+          throw new Error("You do not have admin privileges")
+        } else {
+          throw new Error(`Database error: ${adminCheckError.message}`)
+        }
+      }
+
+      if (!adminCheck) {
+        addDebugInfo("User not found in admin_users table")
         throw new Error("You do not have admin privileges")
       }
 
-      setDebugInfo(`Admin user found in database: ${email}`)
+      addDebugInfo(`Admin user found in database: ${email}`)
 
       // Now attempt to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -107,16 +180,28 @@ export default function AdminLoginPage() {
       })
 
       if (error) {
-        setDebugInfo(`Login error: ${error.message}`)
+        addDebugInfo(`Login error: ${error.message}`)
         throw error
       }
 
       if (data?.user) {
-        setDebugInfo(`Login successful for: ${data.user.email}`)
+        addDebugInfo(`Login successful for: ${data.user.email}`)
+        addDebugInfo(`Session created: ${!!data.session}`)
+
+        if (data.session) {
+          addDebugInfo(`Session expires at: ${new Date(data.session.expires_at! * 1000).toISOString()}`)
+        }
+
+        // Store a flag in localStorage to indicate successful login
+        localStorage.setItem("adminLoginSuccess", "true")
 
         // Force a hard navigation instead of client-side routing
+        addDebugInfo(`Redirecting to: ${redirectedFrom}`)
         window.location.href = redirectedFrom
         return
+      } else {
+        addDebugInfo("No user data returned from login")
+        throw new Error("Login failed. Please try again.")
       }
     } catch (error: any) {
       setError(error.message || "An error occurred during login")
@@ -131,20 +216,29 @@ export default function AdminLoginPage() {
     setResetError(null)
 
     try {
+      addDebugInfo(`Attempting password reset for: ${resetEmail}`)
+
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       })
 
       if (error) {
+        addDebugInfo(`Reset error: ${error.message}`)
         throw error
       }
 
+      addDebugInfo("Reset email sent successfully")
       setResetSent(true)
     } catch (error: any) {
       setResetError(error.message || "An error occurred sending the reset link")
     } finally {
       setResetLoading(false)
     }
+  }
+
+  const retrySessionCheck = () => {
+    setCheckingSession(true)
+    setError(null)
   }
 
   // Show loading state while checking session
@@ -159,6 +253,28 @@ export default function AdminLoginPage() {
               <div className="h-4 w-4 bg-primary rounded-full animate-bounce"></div>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">Checking session...</p>
+
+            {sessionCheckAttempts > 1 && (
+              <div className="mt-4">
+                <p className="text-sm text-amber-600">Session check taking longer than expected.</p>
+              </div>
+            )}
+
+            {sessionCheckAttempts > 2 && (
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => setCheckingSession(false)}>
+                Skip check
+              </Button>
+            )}
+
+            {showDebug && debugInfo.length > 0 && (
+              <div className="mt-4 text-left bg-gray-50 p-2 rounded text-xs font-mono overflow-auto max-h-40">
+                {debugInfo.map((info, i) => (
+                  <div key={i} className="text-gray-700">
+                    {info}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -243,15 +359,20 @@ export default function AdminLoginPage() {
               {error && (
                 <div className="bg-red-50 p-3 rounded-md flex items-start space-x-2 text-red-700 text-sm">
                   <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-                  <span>{error}</span>
+                  <div className="flex-1">
+                    <span>{error}</span>
+                    {error.includes("session") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-1 h-7 text-red-700 hover:text-red-800 hover:bg-red-100 p-0"
+                        onClick={retrySessionCheck}
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" /> Retry session check
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              )}
-
-              {debugInfo && (
-                <Alert className="bg-blue-50 border-blue-200">
-                  <Info className="h-4 w-4 text-blue-600 mr-2" />
-                  <AlertDescription className="text-blue-800 text-xs">{debugInfo}</AlertDescription>
-                </Alert>
               )}
 
               <div className="space-y-2">
@@ -305,6 +426,33 @@ export default function AdminLoginPage() {
                 <p>If you're having trouble logging in, please contact the administrator.</p>
                 <p className="mt-1">Make sure you have been granted admin access to the system.</p>
               </div>
+
+              <div className="w-full flex justify-center mt-4">
+                <button
+                  type="button"
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowDebug(!showDebug)}
+                >
+                  {showDebug ? "Hide Debug Info" : "Show Debug Info"}
+                </button>
+              </div>
+
+              {showDebug && (
+                <div className="mt-2 text-left bg-gray-50 p-2 rounded text-xs font-mono overflow-auto max-h-40">
+                  <div className="font-semibold mb-1">Environment: {process.env.NODE_ENV}</div>
+                  <div className="font-semibold mb-1">
+                    Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? "Available" : "Missing"}
+                  </div>
+                  <div className="font-semibold mb-1">
+                    Anon Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "Available" : "Missing"}
+                  </div>
+                  {debugInfo.map((info, i) => (
+                    <div key={i} className="text-gray-700">
+                      {info}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardFooter>
           </form>
         )}
