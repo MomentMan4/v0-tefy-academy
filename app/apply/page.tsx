@@ -10,6 +10,7 @@ import { CheckCircle, ArrowRight, Shield, Calendar, Users, ArrowLeft } from "luc
 import Image from "next/image"
 import Link from "next/link"
 import { savePartialApplication, markApplicationConverted } from "@/app/actions/applications"
+import { CAL_BOOKING_URL, PAYMENT_OPTIONS } from "@/lib/constants"
 
 export default function ApplyPage() {
   const [includeInternship, setIncludeInternship] = useState(false)
@@ -131,20 +132,18 @@ export default function ApplyPage() {
       localStorage.setItem("enrollment-data", JSON.stringify(formData))
 
       // Redirect to Stripe checkout
-      const url = includeInternship
-        ? "https://buy.stripe.com/cN2aGAg6U2mPdb2bIK?redirect_back=true"
-        : "https://buy.stripe.com/4gw9Cwf2Qd1tdb23cd?redirect_back=true"
+      const url = includeInternship ? PAYMENT_OPTIONS.programWithInternship.str : PAYMENT_OPTIONS.programOnly.str
 
       window.location.href = url
     } catch (error) {
       console.error("Error updating application before payment:", error)
 
       // Still redirect to Stripe even if saving fails
-      const url = includeInternship
-        ? "https://buy.stripe.com/cN2aGAg6U2mPdb2bIK?redirect_back=true"
-        : "https://buy.stripe.com/4gw9Cwf2Qd1tdb23cd?redirect_back=true"
+      const url = includeInternship ? PAYMENT_OPTIONS.programWithInternship.str : PAYMENT_OPTIONS.programOnly.str
 
       window.location.href = url
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -423,7 +422,7 @@ export default function ApplyPage() {
               </p>
               <div className="flex justify-center">
                 <a
-                  href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
+                  href={CAL_BOOKING_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:text-primary/80 font-medium flex items-center gap-1"

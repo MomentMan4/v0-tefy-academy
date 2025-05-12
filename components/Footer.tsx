@@ -6,6 +6,7 @@ import PrivacyModal from "./PrivacyModal"
 import TermsModal from "./TermsModal"
 import CookiesModal from "./CookiesModal"
 import { Mail } from "lucide-react"
+import { CAL_BOOKING_URL, CONTACT_EMAIL } from "@/lib/constants"
 
 export default function Footer() {
   const [showPrivacy, setShowPrivacy] = useState(false)
@@ -59,13 +60,13 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Mail size={14} />
-                <a href="mailto:admissions@tefydigital.com" className="hover:text-primary transition-colors">
-                  admissions@tefydigital.com
+                <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-primary transition-colors">
+                  {CONTACT_EMAIL}
                 </a>
               </li>
               <li>
                 <a
-                  href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
+                  href={CAL_BOOKING_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-primary transition-colors"

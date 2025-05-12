@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, Calendar, Clock, Award, Users, BookOpen } from "lucide-react"
+import { CAL_BOOKING_URL } from "@/lib/constants"
 
 export const metadata = {
   title: "Cybersecurity GRC Program | TEFY Academy",
@@ -64,11 +65,7 @@ export default function ProgramPage() {
               <Link href="/apply">Apply Now</Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <a
-                href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href={CAL_BOOKING_URL} target="_blank" rel="noopener noreferrer">
                 Book a Free Consultation
               </a>
             </Button>
@@ -373,11 +370,7 @@ export default function ProgramPage() {
               asChild
               className="bg-transparent border-white text-white hover:bg-white/10"
             >
-              <a
-                href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href={CAL_BOOKING_URL} target="_blank" rel="noopener noreferrer">
                 Book a Free Consultation
               </a>
             </Button>

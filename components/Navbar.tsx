@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import { CAL_BOOKING_URL } from "@/lib/constants"
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -61,7 +62,7 @@ export default function Navbar() {
 
           {/* Consultation Button */}
           <a
-            href="https://cal.com/tefydigital/cyber-grc-class-chat"
+            href={CAL_BOOKING_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
@@ -109,7 +110,7 @@ export default function Navbar() {
               </Link>
             ))}
             <a
-              href="https://cal.com/tefydigital/cyber-grc-class-chat"
+              href={CAL_BOOKING_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-base font-medium text-muted-foreground hover:text-primary transition-colors"

@@ -3,6 +3,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Users, Shield, Laptop, Calendar, Award, BookOpen } from "lucide-react"
 import CountdownTimer from "@/components/CountdownTimer"
+import { CAL_BOOKING_URL } from "@/lib/constants"
 
 export default function LandingPage() {
   return (
@@ -48,7 +49,7 @@ export default function LandingPage() {
               </div>
               <div className="pt-4">
                 <a
-                  href="https://cal.com/tefydigital/cyber-grc-class-chat"
+                  href={CAL_BOOKING_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-primary hover:text-primary/80 font-medium"
@@ -85,7 +86,7 @@ export default function LandingPage() {
               </div>
               <div className="pt-4">
                 <a
-                  href="https://cal.com/tefydigital/cyber-grc-class-chat"
+                  href={CAL_BOOKING_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-primary hover:text-primary/80 font-medium"
