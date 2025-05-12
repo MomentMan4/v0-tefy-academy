@@ -61,7 +61,7 @@ export default function Navbar() {
 
           {/* Consultation Button */}
           <a
-            href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
+            href="https://cal.com/tefydigital/cyber-grc-class-chat"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
@@ -83,8 +83,10 @@ export default function Navbar() {
         {/* Mobile Hamburger */}
         <button
           onClick={() => setOpen(!open)}
-          className="md:hidden focus:outline-none"
+          className="md:hidden focus:outline-none p-2 rounded-md hover:bg-gray-100"
           aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          aria-controls="mobile-menu"
         >
           {open ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -92,13 +94,13 @@ export default function Navbar() {
 
       {/* Mobile Dropdown */}
       {open && (
-        <div className="md:hidden bg-white border-t shadow-md mt-4 animate-in slide-in-from-top-5">
+        <div className="md:hidden fixed inset-x-0 top-[72px] bg-white border-t shadow-md animate-in slide-in-from-top-5 z-50 max-h-[calc(100vh-72px)] overflow-y-auto">
           <nav className="flex flex-col space-y-4 px-4 py-6">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
+                className={`text-base font-medium transition-colors hover:text-primary ${
                   pathname === link.href ? "text-primary" : "text-muted-foreground"
                 }`}
                 onClick={() => setOpen(false)}
@@ -107,15 +109,15 @@ export default function Navbar() {
               </Link>
             ))}
             <a
-              href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
+              href="https://cal.com/tefydigital/cyber-grc-class-chat"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              className="text-base font-medium text-muted-foreground hover:text-primary transition-colors"
               onClick={() => setOpen(false)}
             >
               Book a Call
             </a>
-            <Button className="mt-2 w-full" onClick={() => setOpen(false)} asChild>
+            <Button className="mt-2 w-full py-6" onClick={() => setOpen(false)} asChild>
               <Link href="/apply">Apply Now</Link>
             </Button>
           </nav>

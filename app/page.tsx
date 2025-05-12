@@ -7,49 +7,106 @@ import CountdownTimer from "@/components/CountdownTimer"
 export default function LandingPage() {
   return (
     <main className="flex flex-col items-center justify-center space-y-20">
-      {/* Hero Section */}
+      {/* Hero Section - Optimized for both mobile and desktop */}
       <section className="w-full bg-gradient-to-br from-indigo-50 via-white to-blue-50 py-16 animate-fade-in">
-        <div className="max-w-6xl mx-auto px-8 flex flex-col md:flex-row items-center gap-8">
-          <div className="flex-1 space-y-6">
-            <div className="inline-block bg-indigo-100 text-indigo-800 px-4 py-1 rounded-full text-sm font-medium mb-2">
-              Limited Spots Available
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              Launch a Future-Proof Cybersecurity Career, in Just 5 Weeks
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Gain real-world GRC skills, unlock remote job opportunities, and pivot into one of the fastest-growing
-              cybersecurity fields — no tech background required.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button asChild size="lg" className="gap-2">
-                <Link href="/apply">
-                  Apply for the Program <ArrowRight size={16} />
-                </Link>
-              </Button>
-              <Button variant="outline" asChild size="lg">
-                <Link href="/assessment">Take The Free Assessment</Link>
-              </Button>
-            </div>
-            <div className="pt-4">
-              <a
-                href="https://cal.com/oluwatoni-abraham/cyber-grc-class-chat"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center text-primary hover:text-primary/80 font-medium"
-              >
-                Book a Free Info Session <ArrowRight size={16} className="ml-2" />
-              </a>
-            </div>
-          </div>
-          <div className="flex-1 flex justify-center">
-            <div className="relative w-full max-w-md h-[350px]">
+        <div className="max-w-6xl mx-auto px-8">
+          {/* Mobile layout (image above text) */}
+          <div className="md:hidden flex flex-col items-center gap-8">
+            {/* Image container for mobile */}
+            <div className="w-full max-w-md h-[300px] relative mb-4">
               <Image
                 src="/cybersecurity-professional.png"
                 alt="Cybersecurity professional"
                 fill
+                priority
+                sizes="(max-width: 768px) 100vw"
                 className="object-cover rounded-lg shadow-lg"
               />
+            </div>
+
+            {/* Text content for mobile */}
+            <div className="space-y-6">
+              <div className="inline-block bg-indigo-100 text-indigo-800 px-4 py-1 rounded-full text-sm font-medium mb-2">
+                Limited Spots Available
+              </div>
+              <h1 className="text-4xl font-bold leading-tight">
+                Launch a Future-Proof Cybersecurity Career, in Just 5 Weeks
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Gain real-world GRC skills, unlock remote job opportunities, and pivot into one of the fastest-growing
+                cybersecurity fields — no tech background required.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button asChild size="lg" className="gap-2">
+                  <Link href="/apply">
+                    Apply for the Program <ArrowRight size={16} />
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild size="lg">
+                  <Link href="/assessment">Take The Free Assessment</Link>
+                </Button>
+              </div>
+              <div className="pt-4">
+                <a
+                  href="https://cal.com/tefydigital/cyber-grc-class-chat"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-primary hover:text-primary/80 font-medium"
+                >
+                  Book a Free Info Session <ArrowRight size={16} className="ml-2" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop layout (side by side) */}
+          <div className="hidden md:flex flex-row items-center gap-8">
+            {/* Text content for desktop */}
+            <div className="flex-1 space-y-6">
+              <div className="inline-block bg-indigo-100 text-indigo-800 px-4 py-1 rounded-full text-sm font-medium mb-2">
+                Limited Spots Available
+              </div>
+              <h1 className="text-5xl font-bold leading-tight">
+                Launch a Future-Proof Cybersecurity Career, in Just 5 Weeks
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Gain real-world GRC skills, unlock remote job opportunities, and pivot into one of the fastest-growing
+                cybersecurity fields — no tech background required.
+              </p>
+              <div className="flex flex-row gap-4">
+                <Button asChild size="lg" className="gap-2">
+                  <Link href="/apply">
+                    Apply for the Program <ArrowRight size={16} />
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild size="lg">
+                  <Link href="/assessment">Take The Free Assessment</Link>
+                </Button>
+              </div>
+              <div className="pt-4">
+                <a
+                  href="https://cal.com/tefydigital/cyber-grc-class-chat"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-primary hover:text-primary/80 font-medium"
+                >
+                  Book a Free Info Session <ArrowRight size={16} className="ml-2" />
+                </a>
+              </div>
+            </div>
+
+            {/* Image container for desktop */}
+            <div className="flex-1 flex justify-center">
+              <div className="relative w-full max-w-md h-[350px]">
+                <Image
+                  src="/cybersecurity-professional.png"
+                  alt="Cybersecurity professional"
+                  fill
+                  priority
+                  sizes="(min-width: 768px) 50vw"
+                  className="object-cover rounded-lg shadow-lg"
+                />
+              </div>
             </div>
           </div>
         </div>

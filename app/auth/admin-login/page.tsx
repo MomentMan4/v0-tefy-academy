@@ -86,6 +86,21 @@ export default function AdminLoginPage() {
     try {
       setDebugInfo(`Attempting login for: ${email}`)
 
+      // First, check if the user exists in the admin_users table
+      const { data: adminCheck, error: adminCheckError } = await supabase
+        .from("admin_users")
+        .select("*")
+        .eq("email", email.trim())
+        .single()
+
+      if (adminCheckError || !adminCheck) {
+        setDebugInfo(`Admin check failed: ${adminCheckError?.message || "User not found in admin_users table"}`)
+        throw new Error("You do not have admin privileges")
+      }
+
+      setDebugInfo(`Admin user found in database: ${email}`)
+
+      // Now attempt to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -98,29 +113,6 @@ export default function AdminLoginPage() {
 
       if (data?.user) {
         setDebugInfo(`Login successful for: ${data.user.email}`)
-
-        // Check if user is an admin
-        const { data: adminData, error: adminError } = await supabase
-          .from("admin_users")
-          .select("*")
-          .eq("email", data.user.email)
-          .single()
-
-        if (adminError) {
-          setDebugInfo(`Admin check error: ${adminError.message}`)
-          // If not an admin, sign them out
-          await supabase.auth.signOut()
-          throw new Error("You do not have admin privileges")
-        }
-
-        if (!adminData) {
-          setDebugInfo(`Not an admin user: ${data.user.email}`)
-          // If not an admin, sign them out
-          await supabase.auth.signOut()
-          throw new Error("You do not have admin privileges")
-        }
-
-        setDebugInfo(`Admin verified, redirecting to: ${redirectedFrom}`)
 
         // Force a hard navigation instead of client-side routing
         window.location.href = redirectedFrom

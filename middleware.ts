@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
       return response
     }
 
-    // If accessing admin routes without a session, redirect to login
+    // Modify the middleware to better handle admin authentication
     if (isAdminRoute && !session) {
       console.log("No session found, redirecting to login")
       const redirectUrl = new URL("/auth/admin-login", request.url)
@@ -49,10 +49,26 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    // If accessing admin login with a session, check if they're an admin and redirect if needed
+    // If accessing admin login with a session, check if they're an admin
     if (isAdminLoginPage && session) {
-      // We'll let the page component handle the admin check and redirect
-      return response
+      try {
+        // Check if user is an admin
+        const supabase = createMiddlewareClient({ req: request, res: response })
+        const { data: adminData, error: adminError } = await supabase
+          .from("admin_users")
+          .select("*")
+          .eq("email", session.user.email)
+          .single()
+
+        if (!adminError && adminData) {
+          // User is an admin, redirect to dashboard
+          return NextResponse.redirect(new URL("/admin/dashboard", request.url))
+        }
+
+        // If not an admin, let the page component handle it
+      } catch (error) {
+        console.error("Error checking admin status:", error)
+      }
     }
 
     return response
