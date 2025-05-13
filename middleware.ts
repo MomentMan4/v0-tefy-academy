@@ -31,6 +31,15 @@ export async function middleware(request: NextRequest) {
 
     const isAdminLoginPage = request.nextUrl.pathname === "/auth/admin-login"
     const isLoginRedirectPage = request.nextUrl.pathname === "/admin/login"
+    const isDiagnosticRoute = request.nextUrl.pathname.startsWith("/api/admin/diagnostic")
+
+    // Skip middleware processing for diagnostic routes to prevent circular dependencies
+    if (isDiagnosticRoute) {
+      if (isDevEnvironment) {
+        console.log("Skipping middleware for diagnostic route")
+      }
+      return response
+    }
 
     // Skip middleware processing for the /admin/login page
     if (isLoginRedirectPage) {

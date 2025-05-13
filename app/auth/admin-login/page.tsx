@@ -7,7 +7,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { createClientSupabaseClient } from "@/lib/supabase/client"
+import { createClientSupabaseClient, clearClientSupabaseClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -34,6 +34,8 @@ export default function AdminLoginPage() {
   const [debugInfo, setDebugInfo] = useState<string[]>([])
   const [showDebug, setShowDebug] = useState(isDevEnvironment)
   const [sessionCheckAttempts, setSessionCheckAttempts] = useState(0)
+  const [diagnosticData, setDiagnosticData] = useState<any>(null)
+  const [runningDiagnostics, setRunningDiagnostics] = useState(false)
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -48,6 +50,25 @@ export default function AdminLoginPage() {
     if (isDevEnvironment || showDebug) {
       console.log(info)
       setDebugInfo((prev) => [...prev, `${new Date().toISOString().split("T")[1].split(".")[0]}: ${info}`])
+    }
+  }
+
+  // Run diagnostics
+  const runDiagnostics = async () => {
+    setRunningDiagnostics(true)
+    try {
+      addDebugInfo("Running diagnostics...")
+      const response = await fetch("/api/admin/diagnostic/auth-check")
+      if (!response.ok) {
+        throw new Error(`Diagnostic API returned ${response.status}: ${response.statusText}`)
+      }
+      const data = await response.json()
+      setDiagnosticData(data)
+      addDebugInfo("Diagnostics completed")
+    } catch (error: any) {
+      addDebugInfo(`Diagnostic error: ${error.message}`)
+    } finally {
+      setRunningDiagnostics(false)
     }
   }
 
@@ -173,8 +194,17 @@ export default function AdminLoginPage() {
 
       addDebugInfo(`Admin user found in database: ${email}`)
 
+      // Clear any existing sessions to prevent conflicts
+      await supabase.auth.signOut()
+      addDebugInfo("Cleared existing sessions")
+
+      // Reset the client to ensure a fresh state
+      clearClientSupabaseClient()
+      const freshClient = createClientSupabaseClient()
+      addDebugInfo("Created fresh Supabase client")
+
       // Now attempt to sign in
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await freshClient.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
@@ -194,6 +224,7 @@ export default function AdminLoginPage() {
 
         // Store a flag in localStorage to indicate successful login
         localStorage.setItem("adminLoginSuccess", "true")
+        localStorage.setItem("adminLoginTime", Date.now().toString())
 
         // Force a hard navigation instead of client-side routing
         addDebugInfo(`Redirecting to: ${redirectedFrom}`)
@@ -438,7 +469,7 @@ export default function AdminLoginPage() {
               </div>
 
               {showDebug && (
-                <div className="mt-2 text-left bg-gray-50 p-2 rounded text-xs font-mono overflow-auto max-h-40">
+                <div className="mt-2 text-left bg-gray-50 p-2 rounded text-xs font-mono overflow-auto max-h-60">
                   <div className="font-semibold mb-1">Environment: {process.env.NODE_ENV}</div>
                   <div className="font-semibold mb-1">
                     Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? "Available" : "Missing"}
@@ -446,11 +477,32 @@ export default function AdminLoginPage() {
                   <div className="font-semibold mb-1">
                     Anon Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "Available" : "Missing"}
                   </div>
+
+                  <div className="flex justify-between items-center mt-2 mb-1">
+                    <span className="font-semibold">Debug Log:</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={runDiagnostics}
+                      disabled={runningDiagnostics}
+                      className="h-6 text-xs py-0 px-2"
+                    >
+                      {runningDiagnostics ? "Running..." : "Run Diagnostics"}
+                    </Button>
+                  </div>
+
                   {debugInfo.map((info, i) => (
                     <div key={i} className="text-gray-700">
                       {info}
                     </div>
                   ))}
+
+                  {diagnosticData && (
+                    <div className="mt-4 border-t pt-2">
+                      <div className="font-semibold mb-1">Diagnostic Results:</div>
+                      <pre className="text-xs overflow-auto">{JSON.stringify(diagnosticData, null, 2)}</pre>
+                    </div>
+                  )}
                 </div>
               )}
             </CardFooter>

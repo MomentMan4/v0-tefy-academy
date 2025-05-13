@@ -4,13 +4,13 @@ import type { Database } from "@/types/supabase"
 // Create a singleton instance to prevent multiple instances
 let supabaseClient: ReturnType<typeof createBrowserClient<Database>> | null = null
 
+// Add detailed logging in development
+const isDevEnvironment = process.env.NODE_ENV === "development"
+
 export function createClientSupabaseClient() {
   if (supabaseClient) {
     return supabaseClient
   }
-
-  // Add detailed logging in development
-  const isDevEnvironment = process.env.NODE_ENV === "development"
 
   if (isDevEnvironment) {
     console.log("Creating new Supabase client with:", {
@@ -19,10 +19,35 @@ export function createClientSupabaseClient() {
     })
   }
 
+  // Validate environment variables
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    console.error("NEXT_PUBLIC_SUPABASE_URL is not defined")
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL is not defined")
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined")
+    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined")
+  }
+
   try {
     supabaseClient = createBrowserClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+        cookies: {
+          name: "sb-auth-token",
+          lifetime: 60 * 60 * 24 * 7, // 1 week
+          domain: "",
+          path: "/",
+          sameSite: "lax",
+        },
+      },
     )
 
     if (isDevEnvironment) {
@@ -40,4 +65,9 @@ export function createClientSupabaseClient() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key",
     )
   }
+}
+
+// Function to clear the client (useful for testing and debugging)
+export function clearClientSupabaseClient() {
+  supabaseClient = null
 }

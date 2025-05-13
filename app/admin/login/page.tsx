@@ -5,14 +5,18 @@ import { useRouter } from "next/navigation"
 import { createClientSupabaseClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Info } from "lucide-react"
+import { AlertCircle, Info, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+
+// Add detailed logging in development
+const isDevEnvironment = process.env.NODE_ENV === "development"
 
 export default function AdminLoginRedirect() {
   const [message, setMessage] = useState("Checking authentication status...")
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string[]>([])
-  const [showDebug, setShowDebug] = useState(process.env.NODE_ENV === "development")
+  const [showDebug, setShowDebug] = useState(isDevEnvironment)
+  const [retryCount, setRetryCount] = useState(0)
   const router = useRouter()
   const supabase = createClientSupabaseClient()
 
@@ -25,20 +29,31 @@ export default function AdminLoginRedirect() {
   useEffect(() => {
     async function checkAuthAndRedirect() {
       try {
-        addDebugInfo("Checking authentication status...")
+        addDebugInfo(`Authentication check attempt ${retryCount + 1}`)
 
         // Check if we have a successful login flag
         const loginSuccess = localStorage.getItem("adminLoginSuccess")
+        const loginTime = localStorage.getItem("adminLoginTime")
 
         if (loginSuccess === "true") {
           addDebugInfo("Login success flag found in localStorage")
-          // Clear the flag
-          localStorage.removeItem("adminLoginSuccess")
 
-          // Redirect to dashboard
-          addDebugInfo("Redirecting to dashboard...")
-          window.location.href = "/admin/dashboard"
-          return
+          // Check if the login was recent (within the last 5 minutes)
+          const loginTimeMs = Number.parseInt(loginTime || "0", 10)
+          const isRecent = Date.now() - loginTimeMs < 5 * 60 * 1000 // 5 minutes
+
+          if (isRecent) {
+            // Clear the flag
+            localStorage.removeItem("adminLoginSuccess")
+            localStorage.removeItem("adminLoginTime")
+
+            // Redirect to dashboard
+            addDebugInfo("Redirecting to dashboard...")
+            window.location.href = "/admin/dashboard"
+            return
+          } else {
+            addDebugInfo("Login success flag is stale, checking session")
+          }
         }
 
         // Get session
@@ -109,7 +124,13 @@ export default function AdminLoginRedirect() {
     }
 
     checkAuthAndRedirect()
-  }, [router, supabase])
+  }, [router, supabase, retryCount])
+
+  const handleRetry = () => {
+    setError(null)
+    setMessage("Retrying authentication check...")
+    setRetryCount((prev) => prev + 1)
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
@@ -124,9 +145,14 @@ export default function AdminLoginRedirect() {
               <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
               <div>
                 <p>{error}</p>
-                <Button variant="outline" size="sm" className="mt-2" onClick={() => router.push("/auth/admin-login")}>
-                  Return to Login
-                </Button>
+                <div className="flex space-x-2 mt-2">
+                  <Button variant="outline" size="sm" onClick={handleRetry}>
+                    <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => router.push("/auth/admin-login")}>
+                    Return to Login
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (

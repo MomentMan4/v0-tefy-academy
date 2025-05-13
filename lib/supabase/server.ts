@@ -19,6 +19,15 @@ export function createServerSupabaseClient() {
     console.log("Anon key available:", !!process.env.SUPABASE_ANON_KEY)
   }
 
+  // Validate environment variables
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL is not defined")
+  }
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_ANON_KEY) {
+    throw new Error("Neither SUPABASE_SERVICE_ROLE_KEY nor SUPABASE_ANON_KEY is defined")
+  }
+
   try {
     // Try to get cookies, but handle errors that might occur during build
     let cookieStore
@@ -31,8 +40,8 @@ export function createServerSupabaseClient() {
 
       // Return a mock client for build time or when cookies are not available
       return createServerClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
             get: () => undefined,
@@ -48,8 +57,8 @@ export function createServerSupabaseClient() {
 
     // Create the actual client with proper cookie handling
     return createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
@@ -85,6 +94,8 @@ export function createServerSupabaseClient() {
         },
         auth: {
           persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
         },
       },
     )
@@ -95,8 +106,8 @@ export function createServerSupabaseClient() {
 
     // Return a mock client for build time or when cookies are not available
     return createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get: () => undefined,
