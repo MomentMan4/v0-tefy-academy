@@ -31,6 +31,26 @@ export function createClientSupabaseClient() {
   }
 
   try {
+    // Add custom fetch with timeout to prevent hanging requests
+    const fetchWithTimeout = (url: RequestInfo | URL, options: RequestInit = {}) => {
+      // Default timeout of 15 seconds
+      const timeout = 15000
+
+      const controller = new AbortController()
+      const { signal } = controller
+
+      const timeoutId = setTimeout(() => {
+        controller.abort()
+      }, timeout)
+
+      return fetch(url, {
+        ...options,
+        signal,
+      }).finally(() => {
+        clearTimeout(timeoutId)
+      })
+    }
+
     supabaseClient = createBrowserClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -39,6 +59,9 @@ export function createClientSupabaseClient() {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
+        },
+        global: {
+          fetch: fetchWithTimeout,
         },
         cookies: {
           name: "sb-auth-token",
@@ -70,4 +93,44 @@ export function createClientSupabaseClient() {
 // Function to clear the client (useful for testing and debugging)
 export function clearClientSupabaseClient() {
   supabaseClient = null
+}
+
+// Function to test Supabase connectivity
+export async function testSupabaseConnectivity() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    return {
+      reachable: false,
+      error: "Missing Supabase configuration",
+      details: {
+        urlAvailable: !!supabaseUrl,
+        keyAvailable: !!supabaseKey,
+      },
+    }
+  }
+
+  try {
+    // Try to ping the Supabase health endpoint
+    const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+      method: "HEAD",
+      headers: {
+        apikey: supabaseKey,
+      },
+      signal: AbortSignal.timeout(5000),
+    })
+
+    return {
+      reachable: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+    }
+  } catch (error: any) {
+    return {
+      reachable: false,
+      error: error.message,
+      errorName: error.name,
+    }
+  }
 }

@@ -42,7 +42,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // Get environment info
+    // Get environment info without VERCEL_REGION
     const envInfo = {
       NODE_ENV: process.env.NODE_ENV,
       VERCEL_ENV: process.env.VERCEL_ENV || "not set",

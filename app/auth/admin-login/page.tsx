@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { AlertCircle, Eye, EyeOff, RefreshCw } from "lucide-react"
+import { AlertCircle, Eye, EyeOff, RefreshCw, Wifi, WifiOff } from "lucide-react"
 import Image from "next/image"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
@@ -36,6 +36,8 @@ export default function AdminLoginPage() {
   const [sessionCheckAttempts, setSessionCheckAttempts] = useState(0)
   const [diagnosticData, setDiagnosticData] = useState<any>(null)
   const [runningDiagnostics, setRunningDiagnostics] = useState(false)
+  const [networkStatus, setNetworkStatus] = useState<"online" | "offline" | "checking">("checking")
+  const [supabaseReachable, setSupabaseReachable] = useState<boolean | null>(null)
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -53,6 +55,87 @@ export default function AdminLoginPage() {
     }
   }
 
+  // Check network connectivity
+  useEffect(() => {
+    const checkNetwork = async () => {
+      setNetworkStatus("checking")
+
+      // First check if browser is online
+      const isOnline = navigator.onLine
+      if (!isOnline) {
+        setNetworkStatus("offline")
+        addDebugInfo("Browser reports network is offline")
+        return
+      }
+
+      // Then check if we can reach Supabase
+      try {
+        addDebugInfo("Checking Supabase connectivity...")
+
+        // Try to ping the Supabase health endpoint
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        if (!supabaseUrl) {
+          throw new Error("Supabase URL is not defined")
+        }
+
+        // Use a simple health check endpoint
+        const healthUrl = `${supabaseUrl}/rest/v1/`
+        const response = await fetch(healthUrl, {
+          method: "HEAD",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+          },
+          // Short timeout to avoid long waits
+          signal: AbortSignal.timeout(5000),
+        })
+
+        if (response.ok) {
+          setSupabaseReachable(true)
+          setNetworkStatus("online")
+          addDebugInfo("Supabase is reachable")
+        } else {
+          setSupabaseReachable(false)
+          setNetworkStatus("online") // Browser is online but Supabase returned an error
+          addDebugInfo(`Supabase returned status: ${response.status}`)
+        }
+      } catch (error: any) {
+        setSupabaseReachable(false)
+        setNetworkStatus("online") // Browser is online but we can't reach Supabase
+        addDebugInfo(`Failed to reach Supabase: ${error.message || "Unknown error"}`)
+
+        // Add more detailed error info
+        if (error.name === "AbortError") {
+          addDebugInfo("Request timed out after 5 seconds")
+        } else if (error.name === "TypeError" && error.message === "Failed to fetch") {
+          addDebugInfo("Network request failed completely - possible CORS or network issue")
+        }
+      }
+    }
+
+    checkNetwork()
+
+    // Also listen for online/offline events
+    const handleOnline = () => {
+      addDebugInfo("Browser went online")
+      checkNetwork()
+    }
+
+    const handleOffline = () => {
+      addDebugInfo("Browser went offline")
+      setNetworkStatus("offline")
+      setSupabaseReachable(false)
+    }
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
+
   // Run diagnostics
   const runDiagnostics = async () => {
     setRunningDiagnostics(true)
@@ -69,6 +152,57 @@ export default function AdminLoginPage() {
       addDebugInfo(`Diagnostic error: ${error.message}`)
     } finally {
       setRunningDiagnostics(false)
+    }
+  }
+
+  // Test Supabase connection directly
+  const testSupabaseConnection = async () => {
+    try {
+      addDebugInfo("Testing direct Supabase connection...")
+
+      // First check if the URL and key are available
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!supabaseUrl || !supabaseKey) {
+        addDebugInfo(`Missing configuration: URL=${!!supabaseUrl}, Key=${!!supabaseKey}`)
+        return
+      }
+
+      // Try a simple health check
+      const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+        method: "HEAD",
+        headers: {
+          apikey: supabaseKey,
+        },
+      })
+
+      addDebugInfo(`Supabase health check status: ${response.status}`)
+
+      // Try to get the Supabase version
+      const versionResponse = await fetch(`${supabaseUrl}/rest/v1/`, {
+        headers: {
+          apikey: supabaseKey,
+        },
+      })
+
+      if (versionResponse.ok) {
+        const serverInfo = await versionResponse.json()
+        addDebugInfo(`Supabase server info: ${JSON.stringify(serverInfo)}`)
+      } else {
+        addDebugInfo(`Failed to get Supabase server info: ${versionResponse.status}`)
+      }
+    } catch (error: any) {
+      addDebugInfo(`Supabase connection test failed: ${error.message}`)
+
+      // Add more detailed error diagnostics
+      if (error.name === "TypeError" && error.message === "Failed to fetch") {
+        addDebugInfo("NETWORK ERROR: This typically indicates one of the following issues:")
+        addDebugInfo("1. CORS policy blocking the request")
+        addDebugInfo("2. Network connectivity issues")
+        addDebugInfo("3. Supabase service is down")
+        addDebugInfo("4. Firewall or security software blocking the request")
+      }
     }
   }
 
@@ -114,34 +248,52 @@ export default function AdminLoginPage() {
           addDebugInfo(`Session found for user: ${session.user.email}`)
 
           // Check if user is an admin
-          const { data: adminData, error: adminError } = await supabase
-            .from("admin_users")
-            .select("*")
-            .eq("email", session.user.email)
-            .single()
+          try {
+            const { data: adminData, error: adminError } = await supabase
+              .from("admin_users")
+              .select("*")
+              .eq("email", session.user.email)
+              .single()
 
-          if (adminError) {
-            addDebugInfo(`Admin check error: ${adminError.message}`)
+            if (adminError) {
+              addDebugInfo(`Admin check error: ${adminError.message}`)
 
-            if (adminError.code === "PGRST116") {
-              addDebugInfo("User not found in admin_users table")
-              // Sign out the user if they're not an admin
+              if (adminError.code === "PGRST116") {
+                addDebugInfo("User not found in admin_users table")
+                // Sign out the user if they're not an admin
+                await supabase.auth.signOut()
+                setError("You do not have admin privileges.")
+              } else {
+                // Other database error
+                setError(`Database error: ${adminError.message}`)
+
+                // Add more detailed diagnostics for fetch errors
+                if (adminError.message.includes("Failed to fetch")) {
+                  addDebugInfo("Network error detected - checking connectivity...")
+                  await testSupabaseConnection()
+                }
+              }
+            } else if (adminData) {
+              addDebugInfo(`Admin user verified: ${session.user.email}`)
+              // User is an admin, redirect to dashboard
+              window.location.href = redirectedFrom
+              return
+            } else {
+              addDebugInfo(`Not an admin user: ${session.user.email}`)
+              // User is not an admin, sign them out
               await supabase.auth.signOut()
               setError("You do not have admin privileges.")
-            } else {
-              // Other database error
-              setError(`Database error: ${adminError.message}`)
             }
-          } else if (adminData) {
-            addDebugInfo(`Admin user verified: ${session.user.email}`)
-            // User is an admin, redirect to dashboard
-            window.location.href = redirectedFrom
-            return
-          } else {
-            addDebugInfo(`Not an admin user: ${session.user.email}`)
-            // User is not an admin, sign them out
-            await supabase.auth.signOut()
-            setError("You do not have admin privileges.")
+          } catch (adminCheckError: any) {
+            addDebugInfo(`Error during admin check: ${adminCheckError.message}`)
+
+            // Special handling for network errors
+            if (adminCheckError.message.includes("fetch") || adminCheckError.name === "TypeError") {
+              setError(`Network error: ${adminCheckError.message}. Please check your connection.`)
+              await testSupabaseConnection()
+            } else {
+              setError(`Error checking admin status: ${adminCheckError.message}`)
+            }
           }
         } else {
           addDebugInfo("No session found")
@@ -149,7 +301,14 @@ export default function AdminLoginPage() {
       } catch (error: any) {
         console.error("Error checking session:", error)
         addDebugInfo(`Error checking session: ${error.message || String(error)}`)
-        setError("Error checking session. Please try again.")
+
+        // Special handling for network errors
+        if (error.message?.includes("fetch") || error.name === "TypeError") {
+          setError(`Network error: ${error.message}. Please check your connection.`)
+          await testSupabaseConnection()
+        } else {
+          setError("Error checking session. Please try again.")
+        }
       } finally {
         setCheckingSession(false)
       }
@@ -170,29 +329,54 @@ export default function AdminLoginPage() {
     try {
       addDebugInfo(`Attempting login for: ${email}`)
 
+      // First, check if we can reach Supabase
+      if (networkStatus === "offline" || supabaseReachable === false) {
+        throw new Error("Cannot connect to the database. Please check your network connection and try again.")
+      }
+
       // First, check if the user exists in the admin_users table
-      const { data: adminCheck, error: adminCheckError } = await supabase
-        .from("admin_users")
-        .select("*")
-        .eq("email", email.trim())
-        .single()
+      try {
+        const { data: adminCheck, error: adminCheckError } = await supabase
+          .from("admin_users")
+          .select("*")
+          .eq("email", email.trim())
+          .single()
 
-      if (adminCheckError) {
-        addDebugInfo(`Admin check error: ${adminCheckError.message}`)
+        if (adminCheckError) {
+          addDebugInfo(`Admin check error: ${adminCheckError.message}`)
 
-        if (adminCheckError.code === "PGRST116") {
+          if (adminCheckError.code === "PGRST116") {
+            throw new Error("You do not have admin privileges")
+          } else {
+            // Special handling for network errors
+            if (adminCheckError.message.includes("Failed to fetch")) {
+              addDebugInfo("Network error detected during admin check")
+              await testSupabaseConnection()
+              throw new Error(
+                `Network error: Cannot connect to the database. Please check your connection and try again.`,
+              )
+            } else {
+              throw new Error(`Database error: ${adminCheckError.message}`)
+            }
+          }
+        }
+
+        if (!adminCheck) {
+          addDebugInfo("User not found in admin_users table")
           throw new Error("You do not have admin privileges")
+        }
+
+        addDebugInfo(`Admin user found in database: ${email}`)
+      } catch (error: any) {
+        // If this is a network error, provide more helpful information
+        if (error.message.includes("Failed to fetch")) {
+          addDebugInfo("Network error during admin check")
+          await testSupabaseConnection()
+          throw new Error("Cannot connect to the database. Please check your network connection and try again.")
         } else {
-          throw new Error(`Database error: ${adminCheckError.message}`)
+          throw error
         }
       }
-
-      if (!adminCheck) {
-        addDebugInfo("User not found in admin_users table")
-        throw new Error("You do not have admin privileges")
-      }
-
-      addDebugInfo(`Admin user found in database: ${email}`)
 
       // Clear any existing sessions to prevent conflicts
       await supabase.auth.signOut()
@@ -204,35 +388,48 @@ export default function AdminLoginPage() {
       addDebugInfo("Created fresh Supabase client")
 
       // Now attempt to sign in
-      const { data, error } = await freshClient.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      })
+      try {
+        const { data, error } = await freshClient.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        })
 
-      if (error) {
-        addDebugInfo(`Login error: ${error.message}`)
-        throw error
-      }
-
-      if (data?.user) {
-        addDebugInfo(`Login successful for: ${data.user.email}`)
-        addDebugInfo(`Session created: ${!!data.session}`)
-
-        if (data.session) {
-          addDebugInfo(`Session expires at: ${new Date(data.session.expires_at! * 1000).toISOString()}`)
+        if (error) {
+          addDebugInfo(`Login error: ${error.message}`)
+          throw error
         }
 
-        // Store a flag in localStorage to indicate successful login
-        localStorage.setItem("adminLoginSuccess", "true")
-        localStorage.setItem("adminLoginTime", Date.now().toString())
+        if (data?.user) {
+          addDebugInfo(`Login successful for: ${data.user.email}`)
+          addDebugInfo(`Session created: ${!!data.session}`)
 
-        // Force a hard navigation instead of client-side routing
-        addDebugInfo(`Redirecting to: ${redirectedFrom}`)
-        window.location.href = redirectedFrom
-        return
-      } else {
-        addDebugInfo("No user data returned from login")
-        throw new Error("Login failed. Please try again.")
+          if (data.session) {
+            addDebugInfo(`Session expires at: ${new Date(data.session.expires_at! * 1000).toISOString()}`)
+          }
+
+          // Store a flag in localStorage to indicate successful login
+          localStorage.setItem("adminLoginSuccess", "true")
+          localStorage.setItem("adminLoginTime", Date.now().toString())
+
+          // Force a hard navigation instead of client-side routing
+          addDebugInfo(`Redirecting to: ${redirectedFrom}`)
+          window.location.href = redirectedFrom
+          return
+        } else {
+          addDebugInfo("No user data returned from login")
+          throw new Error("Login failed. Please try again.")
+        }
+      } catch (error: any) {
+        // If this is a network error, provide more helpful information
+        if (error.message.includes("Failed to fetch")) {
+          addDebugInfo("Network error during login")
+          await testSupabaseConnection()
+          throw new Error(
+            "Cannot connect to the authentication service. Please check your network connection and try again.",
+          )
+        } else {
+          throw error
+        }
       }
     } catch (error: any) {
       setError(error.message || "An error occurred during login")
@@ -285,6 +482,20 @@ export default function AdminLoginPage() {
             </div>
             <p className="mt-2 text-sm text-muted-foreground">Checking session...</p>
 
+            {networkStatus === "offline" && (
+              <div className="mt-4 flex items-center justify-center text-amber-600">
+                <WifiOff className="h-4 w-4 mr-2" />
+                <p className="text-sm">You appear to be offline. Please check your internet connection.</p>
+              </div>
+            )}
+
+            {networkStatus === "online" && supabaseReachable === false && (
+              <div className="mt-4 flex items-center justify-center text-amber-600">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                <p className="text-sm">Cannot connect to the database. Please try again later.</p>
+              </div>
+            )}
+
             {sessionCheckAttempts > 1 && (
               <div className="mt-4">
                 <p className="text-sm text-amber-600">Session check taking longer than expected.</p>
@@ -329,6 +540,34 @@ export default function AdminLoginPage() {
           <CardDescription className="text-center">
             Enter your credentials to access the admin dashboard
           </CardDescription>
+
+          {/* Network status indicator */}
+          <div className="flex items-center mt-2">
+            {networkStatus === "online" && supabaseReachable === true && (
+              <div className="flex items-center text-green-600 text-xs">
+                <Wifi className="h-3 w-3 mr-1" />
+                <span>Connected to database</span>
+              </div>
+            )}
+            {networkStatus === "online" && supabaseReachable === false && (
+              <div className="flex items-center text-amber-600 text-xs">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                <span>Cannot connect to database</span>
+              </div>
+            )}
+            {networkStatus === "offline" && (
+              <div className="flex items-center text-red-600 text-xs">
+                <WifiOff className="h-3 w-3 mr-1" />
+                <span>You are offline</span>
+              </div>
+            )}
+            {networkStatus === "checking" && (
+              <div className="flex items-center text-gray-400 text-xs">
+                <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                <span>Checking connection...</span>
+              </div>
+            )}
+          </div>
         </CardHeader>
 
         {showResetForm ? (
@@ -373,7 +612,7 @@ export default function AdminLoginPage() {
                     />
                   </div>
                   <div className="flex flex-col space-y-2">
-                    <Button type="submit" className="w-full" disabled={resetLoading}>
+                    <Button type="submit" className="w-full" disabled={resetLoading || networkStatus === "offline"}>
                       {resetLoading ? "Sending..." : "Send Reset Link"}
                     </Button>
                     <Button type="button" variant="outline" className="w-full" onClick={() => setShowResetForm(false)}>
@@ -392,15 +631,36 @@ export default function AdminLoginPage() {
                   <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <span>{error}</span>
-                    {error.includes("session") && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-1 h-7 text-red-700 hover:text-red-800 hover:bg-red-100 p-0"
-                        onClick={retrySessionCheck}
-                      >
-                        <RefreshCw className="h-3 w-3 mr-1" /> Retry session check
-                      </Button>
+                    {error.includes("Failed to fetch") ||
+                    error.includes("Network error") ||
+                    error.includes("connect to the database") ? (
+                      <div className="mt-2 text-sm">
+                        <p>This could be due to:</p>
+                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                          <li>Network connectivity issues</li>
+                          <li>Supabase service being temporarily unavailable</li>
+                          <li>Firewall or security settings blocking the connection</li>
+                        </ul>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2 h-7 text-red-700 hover:text-red-800 hover:bg-red-100 p-0"
+                          onClick={testSupabaseConnection}
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" /> Test connection
+                        </Button>
+                      </div>
+                    ) : (
+                      error.includes("session") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-1 h-7 text-red-700 hover:text-red-800 hover:bg-red-100 p-0"
+                          onClick={retrySessionCheck}
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" /> Retry session check
+                        </Button>
+                      )
                     )}
                   </div>
                 </div>
@@ -438,7 +698,13 @@ export default function AdminLoginPage() {
                   </button>
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={
+                  loading || networkStatus === "offline" || (networkStatus === "online" && supabaseReachable === false)
+                }
+              >
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
               <div className="text-center">
@@ -477,18 +743,32 @@ export default function AdminLoginPage() {
                   <div className="font-semibold mb-1">
                     Anon Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "Available" : "Missing"}
                   </div>
+                  <div className="font-semibold mb-1">
+                    Network Status: {networkStatus} | Supabase Reachable:{" "}
+                    {supabaseReachable === null ? "Unknown" : supabaseReachable ? "Yes" : "No"}
+                  </div>
 
                   <div className="flex justify-between items-center mt-2 mb-1">
                     <span className="font-semibold">Debug Log:</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={runDiagnostics}
-                      disabled={runningDiagnostics}
-                      className="h-6 text-xs py-0 px-2"
-                    >
-                      {runningDiagnostics ? "Running..." : "Run Diagnostics"}
-                    </Button>
+                    <div className="space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={testSupabaseConnection}
+                        className="h-6 text-xs py-0 px-2"
+                      >
+                        Test Connection
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={runDiagnostics}
+                        disabled={runningDiagnostics}
+                        className="h-6 text-xs py-0 px-2"
+                      >
+                        {runningDiagnostics ? "Running..." : "Run Diagnostics"}
+                      </Button>
+                    </div>
                   </div>
 
                   {debugInfo.map((info, i) => (
